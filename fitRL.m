@@ -1,17 +1,16 @@
-function x = fitRL(sa, sr)
+function x = fitRL
 
     %% Fit model parameters to (simulated) data
-    
-    %%% Define data as global variable
-    global D; D = [sa; sr];
+
     
     %%% Find parameter values, for which participant actions have the
     %%% highest likelihood (i.e., lowest negative log-likelihood)
-    pmin = [0 0];   % lower bound of params (all params should be on the same scale)
-    pmax = [1 1];   % upper bound of params 
+    n_params = 6;
+    pmin = zeros(1, n_params);   % lower bound of params (all params should be on the same scale)
+    pmax = ones(1, n_params);   % upper bound of params 
     
     par0 = ones(1, length(pmin)) .* ((pmax - pmin) / 2);   % initial start values for search 
-    options = optimoptions(@fmincon,'Algorithm','sqp');   % options for search
+    options = optimoptions(@fmincon, 'Algorithm', 'sqp');   % options for search
     problem = createOptimProblem('fmincon', 'objective',...   % search problem
      @computeNLL, 'x0', par0, 'lb', pmin, 'ub', pmax, 'options', options);
     ms = MultiStart;   % we want multiple starts to find a global minimum
