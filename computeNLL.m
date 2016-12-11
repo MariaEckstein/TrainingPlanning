@@ -61,7 +61,7 @@ function NLL = computeNLL(par)
         Sim.reward(t, :) = reward;
         
         % Get log of likelihoods of both choices and sum up
-        LL = LL + log(prob_frac2);%+ log(prob_frac1);
+        LL = LL + log(prob_frac2) + log(prob_frac1);
         
     end
             
