@@ -4,7 +4,7 @@ ntrials = 100;
 p = [0.25 .75];
 
 
-for repetition=1:100
+for repetition=1:10
 repetition
 alpha = .5*rand;
 Q = [.5 .5];
@@ -25,7 +25,7 @@ end
 % plot(sa-1,'*')
 % plot(sr,'o')
 
-params=fitRL(sa,sr);
+params=fitRLo(sa,sr);
 params(2)=params(2)*100;
 
 genrec(repetition,:)=[alpha,params];
@@ -43,7 +43,7 @@ lsline
 end
 
 
-function params = fitRL(sa,sr)
+function params = fitRLo(sa,sr)
 global D;D=[sa;sr];
 % options = optimset('display','off');
 pmin =[0 0];
