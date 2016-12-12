@@ -1,7 +1,7 @@
 function NLL = computeNLL(par)
 
     %% Compute -LL of behavior, given parameters
-    global Agent;   % contains Q1, Q2, frac1, frac2, reward
+    global Agent;   % contains frac1, frac2, and reward of one agent
     global Sim;
     
     %%% Parameter values at beginning of experiment
@@ -13,55 +13,64 @@ function NLL = computeNLL(par)
     w = par(6);
     
     epsilon = .00001;
-    Q1 = [.5 .5];
-    Q2 = [.5 .5 .5 .5];
+    common = 0.8;
+    Q1 = [.5 .5];   % initial values 2st-stage fractals
+    Qmf1 = [.5 .5];
+    Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
+    Qmf2 = [.5 .5 .5 .5];
     Sim.Q1(1, :) = Q1;
     Sim.Q2(1, :) = Q2;
 
     %%% Data: Participant behavior (= sequence of choices)
-    ntrials = length(Agent.frac1);   % number of trials 
+    n_trials = length(Agent.frac1);   % number of trials 
     LL = 0;   % initialize log likelihood
 
     %%% LL for each trial, given sequence of previous trials
-    for t = 1:ntrials
+    for t = 1:n_trials
         
-        % Calculate likelihood of chosen actions: e^Qx / (e^Qa + e^Qb)
+        % Stage 1: Calculate likelihood of chosen actions
         frac1 = Agent.frac1(t);
-        prob_frac1 = 1 / (exp( beta1 * (Q1(1) - Q1(frac1))) + exp( beta1 * (Q1(2) - Q1(frac1))));   % e^bQx / (e^bQa + e^bQb) = 1 / (e^b(Qa-Qx) + e^b(Qb-Qx))
-        prob_frac1 = (1 - epsilon) * prob_frac1 + epsilon * 0.5;   % combination of calculated prob and randon; reason: take care of Inf, resulting from computer being inaccurate
+        fractals1 = [1, 2];
+        prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
         
+        % Stage 2: Calculate likelihood of chosen actions
         frac2 = Agent.frac2(t);
-        if any(frac2 == [1 2])
-            frac2o = 1;
+        if any(frac2 == [1, 2])
+            fractals2 = [1, 2];
         else
-            frac2o = 3;
+            fractals2 = [3, 4];
         end
-        prob_frac2 = 1 / (exp( beta2 * (Q2(frac2o) - Q2(frac2))) + exp( beta2 * (Q2(frac2o + 1) - Q2(frac2))));
-        prob_frac2 = (1 - epsilon) * prob_frac2 + epsilon * 0.5;
+        prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, epsilon);
         
         % Check outcome of trial and update values for next trial
         reward = Agent.reward(t);
         
         % Model-free
-        RPE2 = reward - Q2(frac2);   % reward prediction error: difference between actual and predicted reward
-        Q2(frac2) = Q2(frac2) + alpha2 * RPE2;   % 2nd-stage values
-        VPE1 = Q2(frac2) - Q1(frac1);   % value prediction error: difference between actual and predicted value of 2nd fractal
-        RPE1 = 0;%lambda * (reward - Q1(frac1));
-        Q1(frac1) = Q1(frac1) + alpha1 * (VPE1 + RPE1);   % 1st-stage values
-            
-        
+        Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);
+        Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2(frac2));
+
         % Model-based
-        
+        [Qmb1, Qmb2] = MB_update(Qmf2, common);
+
+        % Combine model-free and model-based
+        Q1 = (1 - w) * Qmf1 + w * Qmb1;
+        Q2 = Qmf2;
         
         %%% Save trial data
         Sim.Q1(t+1, :) = Q1;
         Sim.Q2(t+1, :) = Q2;
-        Sim.frac1(t, :) = frac1;
-        Sim.frac2(t, :) = frac2;
-        Sim.reward(t, :) = reward;
+        Sim.Qmb1(t+1, :) = Qmb1;
+        Sim.Qmb2(t+1, :) = Qmb2;
+        Sim.Qmf1(t+1, :) = Qmf1;
+        Sim.Qmf2(t+1, :) = Qmf2;
         
         % Get log of likelihoods of both choices and sum up
-        LL = LL + log(prob_frac2) + log(prob_frac1);
+        if any(frac2 == [1 3])
+            f2_index = 1;
+        else
+            f2_index = 2;
+        end
+        LL = LL + log(prob_frac2(f2_index)) + log(prob_frac1(frac1));
         
     end
             
