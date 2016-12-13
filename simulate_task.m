@@ -1,7 +1,11 @@
 function Data = simulate_task(n_agents, n_trials, par, fractal_rewards)
 
+%     n_agents = 5;
+%     n_trials = 5;
+%     par = [0.1, 0.1, 0.3, 0.3, 0.4, 0.5];
+%     fractal_rewards = [0 .3 .7 1];
     %%% Initialize big dataframe that will contain all agents' behavior
-    global Data;
+%     Data = zeros(n_agents * n_trials, 10 + length(par));
     epsilon = 0.000001;
     common = 0.8;
     random_par = 0;
