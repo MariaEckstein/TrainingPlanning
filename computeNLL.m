@@ -1,8 +1,8 @@
-function NLL = computeNLL(par)
+function NLL = computeNLL(Agent, par)
 
     %% Compute -LL of behavior, given parameters
-    global Agent;   % contains frac1, frac2, and reward of one agent
-    global Sim;
+%     global Agent;   % contains frac1, frac2, and reward of one agent
+%     global Sim;
     
     %%% Parameter values at beginning of experiment
     alpha1 = par(1) / 2;
@@ -18,6 +18,9 @@ function NLL = computeNLL(par)
     Qmf1 = [.5 .5];
     Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
     Qmf2 = [.5 .5 .5 .5];
+    
+    %%% Set up Sim, which will hold the results
+    clear Sim
     Sim.Q1(1, :) = Q1;
     Sim.Q2(1, :) = Q2;
 

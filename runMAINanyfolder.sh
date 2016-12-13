@@ -1,0 +1,1 @@
+cd /home/bunge/maria/Desktop/TrainingPlanning && matlab -nodesktop -noflash -r MAIN

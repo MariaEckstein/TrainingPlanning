@@ -1,0 +1,1 @@
+matlab -nodesktop -noflash -r MAIN
