@@ -6,7 +6,7 @@ function Data = simulate_task(n_agents, n_trials, par, fractal_rewards)
     common = 0.8;
     random_par = 0;
     if isempty(par)
-        random_par = 1
+        random_par = 1;
     end
 
     %%% Simulate a bunch of agents
