@@ -1,6 +1,6 @@
 OPEN CLUSTER
 - start NX client for Windows
-- type in user name "maria" and pw 35TeeAmi
+- type in user name "maria" and pw ...
 
 RUN A MATLAB SCRIPT
 - Copy script and necessary files over using winSCP

@@ -1,4 +1,4 @@
-function NLL = computeNLL(Agent, par)
+function [NLL, BIC, AIC] = computeNLL(Agent, par, lambda, w)
 
 %% Switches
 keep_simulated_values = false;   % If true, this produce a struct Sim, which holds the simulated values of each trial
@@ -10,8 +10,12 @@ alpha1 = par(1) / 2;
 alpha2 = par(2) / 2;
 beta1 = par(3) * 100;
 beta2 = par(4) * 100;
-lambda = 0.5 + par(5) / 2;
-w = par(6);
+if isempty(lambda)
+    lambda = par(5);
+end
+if isempty(w)
+    w = par(6);
+end
 
 epsilon = .00001;
 common = 0.8;
@@ -52,14 +56,14 @@ for t = 1:n_trials
     reward = Agent.reward(t);
 
     % Model-free
+    Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);
     Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);
-    Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2(frac2));
 
     % Model-based
     [Qmb1, Qmb2] = MB_update(Qmf2, common);
 
     % Combine model-free and model-based
-    Q1 = (1 - w) * Qmf1 + w * Qmb1;
+    Q1 = (1 - w) * Qmf1 + w * Qmb1;   % CHECK IF USUALLY COMBINED HERE OR AT PROBABILITIES!
     Q2 = Qmf2;
 
     %%% Save trial data
@@ -84,5 +88,10 @@ end
 
 % Take negative to get negative log likelihood
 NLL = -LL;
+
+% Calculate BIC = -2 * ln(L) + k * ln(n) ; -ln(L) = NLL; L=maximized value of LL;
+% k=number of params to be estimated; n=number of data points, i.e., trials
+BIC = 2 * NLL + length(par) * log(2 * n_trials);
+AIC = 2 * NLL + 2 * length(par);
 
 end

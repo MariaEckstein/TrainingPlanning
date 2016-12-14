@@ -8,11 +8,15 @@ function Data = simulate_task(n_agents, n_trials, par, fractal_rewards)
 %     Data = zeros(n_agents * n_trials, 10 + length(par));
     epsilon = 0.000001;
     common = 0.8;
-    random_par = 0;
-    if isempty(par)
-        random_par = 1;
+    %%% Find out which parameters are given and which should be randomized
+    %%% in each agent
+    random_par = zeros(1, length(par));   % random_par == 1 where elements of par need to be randomized
+    for r = 1:length(par)
+        if par(r) == -1
+            random_par(r) = 1;
+        end
     end
-
+    
     %%% Simulate a bunch of agents
     for agent = 1:n_agents
         a = (agent - 1) * n_trials + 1;   % get first row of this agent in Data
@@ -25,14 +29,18 @@ function Data = simulate_task(n_agents, n_trials, par, fractal_rewards)
         Data.AgentID(a:(a+n_trials-1)) = agent;
         
         % Create an individual agent
-        if random_par
-            par = rand([1, 6]);
+        r_pos = 1;
+        for r = random_par   % random_par == 1 where elements of par need to be randomized
+            if r
+                par(r_pos) = rand;
+            end
+            r_pos = r_pos + 1;
         end
         alpha1 = par(1) / 2;
         alpha2 = par(2) / 2;
         beta1 = par(3) * 100;
         beta2 = par(4) * 100;
-        lambda = 0.5 + par(5) / 2;
+        lambda = par(5) ;
         w = par(6);
         
         % Let agent play the game
@@ -52,12 +60,12 @@ function Data = simulate_task(n_agents, n_trials, par, fractal_rewards)
             frac2 = choice(fractals2, prob_frac2);   % pick one action, according to probs
             
             % Agent receives reward
-            reward = rand < fractal_rewards(frac2);
+            reward = rand < fractal_rewards(frac2, t);
             
             %%%  Agent updates 1st- and 2nd-stage values
             % Model-free
+            Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);
             Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);
-            Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2(frac2));
             
             % Model-based
             [Qmb1, Qmb2] = MB_update(Qmf2, common);

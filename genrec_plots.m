@@ -18,6 +18,7 @@ Agent.par = true_par(1, :);
 
 
 %% Look at difference between mb values, mf values, and combined values
+today = date;
 figure
 subplot(2, 3, 1)
 plot(Agent.Q1)
@@ -37,7 +38,7 @@ title('Q2 (mf)')
 subplot(2, 3, 6)
 plot(Agent.Qmb2)
 title('Q2 (mb)')
-saveas(gcf, ['MBMFQ', today, '2.png'])
+saveas(gcf, ['Plots/MBMFQ', today, '4.png'])
 
 
 %% Plot all true and fitted alphas and betas against each other
@@ -66,6 +67,6 @@ subplot(3, 2, 6)
 scatter(genrec.w(1:length(genrec.fw)), genrec.fw)
 lsline
 title('W')
-saveas(gcf, ['TrueFittedAll', today, '2.png'])
+saveas(gcf, ['Plots/TrueFittedAll', today, '4.png'])
 
 end

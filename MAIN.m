@@ -3,7 +3,7 @@
 % Try MB on MF and MF on MB
 
 
-location = 'cluster';   % Can be 'home' or 'cluster'
+location = 'home';   % Can be 'home' or 'cluster'
 
 if strcmp(location, 'home')
     %% Simulate some data
@@ -12,17 +12,19 @@ if strcmp(location, 'home')
     n_trials = 15;
 else
     %% Specify parallel processing stuff
-    parpool(6);   % Can only be 2 for my old laptop; should be <= 8 on the HWNI cluster
-
+    parpool(8);   % Can only be 2 for my old laptop; should be <= 8 on the HWNI cluster
     %% Simulate some data
-    n_agents = 300;
+    n_agents = 100;
     n_fmincon_iterations = 80;
     n_trials = 150;
 end
     
-sim_par = [0.1, 0.1, 0.3, 0.3, 0.4, 0.5];
-fractal_rewards = [0 .3 .7 1];
-Data = simulate_task(n_agents, n_trials, [], fractal_rewards);
+mf_par = [-1, -1, -1, -1, 1, 0];
+mb_par = [-1, -1, -1, -1, 1, 1];
+sim_par = -1 * ones(1, length(mf_par));   % mf_par;
+load('list1.mat');
+fractal_rewards = x(5:8,:);
+Data = simulate_task(n_agents, n_trials, sim_par, fractal_rewards);
 
  %% Find parameters that maximize the likelihood of the data
 clear genrec
@@ -48,14 +50,18 @@ for agent = 1:n_agents
     n_params = length(sim_par);
     pmin = zeros(1, n_params);   % lower bound of params (all params should be on the same scale)
     pmax = ones(1, n_params);   % upper bound of params 
-    par0 = ones(1, length(pmin)) .* ((pmax - pmin) / 2);   % initial start values for search 
+    par0 = ones(1, length(pmin)) .* ((pmax - pmin) / 2);   % initial start values for search
+%     pmin = pmin(1:5);
+%     pmax = pmax(1:5);
+%     par0 = par0(1:5);
 
     %%% MultiStart
     options = optimoptions(@fmincon, 'Algorithm', 'sqp');   % options for search
     problem = createOptimProblem('fmincon', 'objective',...   % search problem
-    @(par)computeNLL(Agent, par), 'x0', par0, 'lb', pmin, 'ub', pmax, 'options', options);
+    @(par)computeNLL(Agent, par, [], []), 'x0', par0, 'lb', pmin, 'ub', pmax, 'options', options);
     ms = MultiStart('UseParallel', true);   % we want multiple starts to find a global minimum % 'UseParallel', true
     [x,f] = run(ms, problem, n_fmincon_iterations);   % look at x-position and function value of found minimum
+    [NLL, BIC] = computeNLL(Agent, x, [], []);
 
     %%% Create genrec, which will hold true and fitted parameters for each agent
     % True parameters
@@ -73,13 +79,18 @@ for agent = 1:n_agents
     genrec.fb2(agent, :) = x(4);
     genrec.fl(agent, :) = x(5);
     genrec.fw(agent, :) = x(6);
+    genrec.BIC(agent, :) = BIC;
 end
 
-%% Save genrec
+%% Save genrec and Data
 today = date;
 now = clock;
+label = 'free_agents_free_sim';
 hour = num2str(now(4));
 minute = num2str(now(5));
 time = [hour '.' minute];
-file_name = ['genrec_' today '_' time '.mat'];
-save(file_name, 'genrec')
+genrec_file_name = ['genrec_' label '_' today '_' time '.mat'];
+save(genrec_file_name, 'genrec')
+
+data_file_name = ['data_' label '_' today '_' time '.mat'];
+save(data_file_name, 'Data')
