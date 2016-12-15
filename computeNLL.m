@@ -1,11 +1,12 @@
-function [NLL, BIC, AIC] = computeNLL(Agent, par, lambda, w)
-
+function [NLL] = computeNLL(Agent, par, common, lambda, w, p_par, k_par)
+%, BIC, AIC
 %% Switches
 keep_simulated_values = false;   % If true, this produce a struct Sim, which holds the simulated values of each trial
 % If I want to get Sim out of this function, I need to declare it global or make it an output argument of the function
 
 %% Compute -LL of behavior, given parameters    
-%%% Parameter values at beginning of experiment
+%%% Parameters at beginning of experiment
+n_params = length(par);
 alpha1 = par(1) / 2;
 alpha2 = par(2) / 2;
 beta1 = par(3) * 100;
@@ -16,9 +17,15 @@ end
 if isempty(w)
     w = par(6);
 end
+if isempty(p_par)
+    p_par = par(7) * 10 - 5;
+end
+if isempty(k_par)
+    k_par = par(8) * 10 - 5;
+end
 
+%%% Initial fractal values
 epsilon = .00001;
-common = 0.8;
 Q1 = [.5 .5];   % initial values 2st-stage fractals
 Qmf1 = [.5 .5];
 Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
@@ -32,28 +39,31 @@ if keep_simulated_values
 end
 
 %%% Data: Participant behavior (= sequence of choices)
-n_trials = length(Agent.frac1);   % number of trials 
+data_columns;   % Find out which columns contain what
+[n_trials, ~] = size(Agent);   % number of trials 
 LL = 0;   % initialize log likelihood
 
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
-    frac1 = Agent.frac1(t);
+    frac1 = Agent(t, frac1_c);
+    key1 = Agent(t, key1_c);
     fractals1 = [1, 2];
-    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
+    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
 
     % Stage 2: Calculate likelihood of chosen actions
-    frac2 = Agent.frac2(t);
+    frac2 = Agent(t, frac2_c);
+    key2 = Agent(t, key2_c);
     if any(frac2 == [1, 2])
         fractals2 = [1, 2];
     else
         fractals2 = [3, 4];
     end
-    prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, epsilon);
+    prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);
 
     % Check outcome of trial and update values for next trial
-    reward = Agent.reward(t);
+    reward = Agent(t, reward_c);
 
     % Model-free
     Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);
@@ -91,7 +101,7 @@ NLL = -LL;
 
 % Calculate BIC = -2 * ln(L) + k * ln(n) ; -ln(L) = NLL; L=maximized value of LL;
 % k=number of params to be estimated; n=number of data points, i.e., trials
-BIC = 2 * NLL + length(par) * log(2 * n_trials);
-AIC = 2 * NLL + 2 * length(par);
+% BIC = 2 * NLL + length(par) * log(2 * n_trials);
+% AIC = 2 * NLL + 2 * length(par);
 
 end
