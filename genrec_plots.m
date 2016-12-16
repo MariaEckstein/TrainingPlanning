@@ -13,10 +13,12 @@ label = 'free_agents_free_sim';
 %% Plot all true and fitted alphas and betas against each other
 BIC = mean(genrec(:,20));
 figure
-for i = 1:length(gen_aabblwpk_c)
+for i = 1:6%length(gen_aabblwpk_c)
     subplot(3, 3, i)
     scatter(genrec(:, gen_aabblwpk_c(i)), genrec(:, rec_aabblwpk_c(i)))
     lsline
+    xlim([0 1])
+    ylim([0 1])
 end
 saveas(gcf, ['Plots/TrueFittedAll', today, '4.png'])
 
