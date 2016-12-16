@@ -1,0 +1,7 @@
+Generated:	Recovered:	MF		MB		HYB
+MF						153.38		
+								(l==0)
+								...
+								(l==1)
+MB								196.36
+HYB										

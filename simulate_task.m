@@ -44,8 +44,8 @@ for agent = 1:n_agents
     beta2 = sim_par(4) * 100;
     lambda = sim_par(5) ;
     w = sim_par(6);
-    p_par = sim_par(7) * 10 - 5;
-    k_par = sim_par(8) * 10 - 5;
+    p_par = 0; % sim_par(7) / 2;
+    k_par = 0; %sim_par(8);
     
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
     key1 = 123;
@@ -59,7 +59,7 @@ for agent = 1:n_agents
 
         %%% Stage 1
         fractals1 = [1, 2];
-        keys1 = randsample([1 2], 2, false);   % Randomly determine which key is associated with each fractal
+        keys1 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
         % Agent picks one of the two fractals
         prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
         frac1 = choice(fractals1, prob_frac1);   % pick one action, according to probs
@@ -67,8 +67,8 @@ for agent = 1:n_agents
 
         %%% Stage 2
         fractals2 = select_stage2_fractals(frac1, common);
-        keys2 = randsample([1 2], 2, false);   % Randomly determine which key is associated with each fractal
-        keys2 = [keys2 keys2];   % Repeat, so that frac2==3 works like frac2==1 and frac2==4 works like frac2==2
+        keys2 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
+        keys2 = [keys2 keys2];   % repeat, so that frac2==3 works like frac2==1 and frac2==4 works like frac2==2
         % Agent picks one of the two fractals
         prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
         frac2 = choice(fractals2, prob_frac2);   % pick one action, according to probs
@@ -102,6 +102,4 @@ for agent = 1:n_agents
         Data(a_t, par_c) = sim_par;
 
     end
-end
-
 end
