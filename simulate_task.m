@@ -1,22 +1,29 @@
-function Data = simulate_task(n_agents, n_trials, sim_par, fractal_rewards, common)
+function Data = simulate_task(n_agents, n_trials, par, fractal_rewards, common)
 
 %     n_agents = 5;
 %     n_trials = 5;
-%     par = [0.1, 0.1, 0.3, 0.3, 0.4, 0.5];
-%     fractal_rewards = [0 .3 .7 1];
+%     par = [0.1, 0.4, 0.3, 0.3, 0.4, 0.5, 0.7, 0.2];
+%     load('list1.mat');
+%     fractal_rewards = x(5:8,:);
+%     common = 0.7;
 
 %% Initialize dataframe that will hold all agents' behavior
 Data = zeros(n_agents * n_trials, 25);
-n_params = length(sim_par);
+n_params = length(par);
 data_columns;
 epsilon = 0.000001;
 
-%% Find out which parameters are given and which should be free in each agent
-random_par = zeros(1, length(sim_par));   % random_par == 1 where elements of par need to be randomized
-for r = 1:length(sim_par)
-    if sim_par(r) == -1
-        random_par(r) = 1;
-    end
+%%% Find out which parameters are given and which should be free in each agent
+rand_par = par == -1;   % check which parameters should vary between agents
+if par(7) == 0
+    p_par = 0;
+else
+    p_par = rand;
+end
+if par(8) == 0
+    k_par = 0;
+else
+    k_par = rand;
 end
 
 %% Simulate a bunch of agents
@@ -31,21 +38,19 @@ for agent = 1:n_agents
     Data(a:(a+n_trials-1), AgentID_c) = agent;
 
     % Create an individual agent
-    r_pos = 1;
-    for r = random_par   % random_par == 1 where elements of par need to be randomized
-        if r
-            sim_par(r_pos) = rand;
-        end
-        r_pos = r_pos + 1;
+    par(rand_par) = rand(1, sum(rand_par));   % draw random numbers for these parameters
+    alpha1 = par(1) ;
+    alpha2 = par(2) ;
+    beta1 = par(3) * 100;
+    beta2 = par(4) * 100;
+    lambda = par(5) ;
+    w = par(6);
+    if ~(p_par == 0)
+        p_par = par(7) * 10 - 5;
     end
-    alpha1 = sim_par(1) / 2;
-    alpha2 = sim_par(2) / 2;
-    beta1 = sim_par(3) * 100;
-    beta2 = sim_par(4) * 100;
-    lambda = sim_par(5) ;
-    w = sim_par(6);
-    p_par = 0; %sim_par(7) / 2;
-    k_par = 0; %sim_par(8);
+    if ~ (k_par == 0)
+        k_par = par(8) * 10 - 5;
+    end
     
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
     key1 = 123;
@@ -61,7 +66,7 @@ for agent = 1:n_agents
         fractals1 = [1, 2];
         keys1 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
         % Agent picks one of the two fractals
-        prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
+        prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** ((beta * (Qb - Qa) + k * (kbonb - keybona) + p * (pbonb = pbona)))
         frac1 = choice(fractals1, prob_frac1);   % pick one action, according to probs
         key1 = keys1(frac1);   % record which key corresponds to the selected fractal
 
@@ -99,7 +104,7 @@ for agent = 1:n_agents
         Data(a_t, [key1_c key2_c]) = [key1 key2];
         Data(a_t, reward_c) = reward;
         % Parameters
-        Data(a_t, par_c) = sim_par;
+        Data(a_t, par_c) = par;
 
     end
 end

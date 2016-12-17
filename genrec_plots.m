@@ -10,10 +10,10 @@ minute = num2str(now(5));
 time = [hour '.' minute];
 label = 'free_agents_free_sim';
 
-%% Plot all true and fitted alphas and betas against each other
+%% Plot all true and fitted values against each other
 BIC = mean(genrec(:,20));
 figure
-for i = 1:6%length(gen_aabblwpk_c)
+for i = 1:8%length(gen_aabblwpk_c)
     subplot(3, 3, i)
     scatter(genrec(:, gen_aabblwpk_c(i)), genrec(:, rec_aabblwpk_c(i)))
     lsline

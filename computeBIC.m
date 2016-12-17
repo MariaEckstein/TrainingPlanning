@@ -7,14 +7,14 @@ keep_simulated_values = false;   % If true, this produce a struct Sim, which hol
 %% Compute -LL of behavior, given parameters    
 %%% Parameters at beginning of experiment
 n_params = n_fit;
-alpha1 = par(1) / 2;
-alpha2 = par(2) / 2;
+alpha1 = par(1);
+alpha2 = par(2);
 beta1 = par(3) * 100;
 beta2 = par(4) * 100;
 lambda = par(5);
 w = par(6);
-p_par = 0; %par(7) * 10 - 5;
-k_par = 0; %par(8) * 10 - 5;
+p_par = par(7) * 10 - 5;
+k_par = par(8) * 10 - 5;
 
 %%% Initial fractal values
 epsilon = .00001;
@@ -35,25 +35,30 @@ data_columns;   % Find out which columns contain what
 [n_trials, ~] = size(Agent);   % number of trials 
 LL = 0;   % initialize log likelihood
 
+key1 = 123;
+key2 = 123;
+frac1 = 123;
+frac2 = 123;
+
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
+    fractals1 = [1, 2];
+    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qb - Qa))
     frac1 = Agent(t, frac1_c);
     key1 = Agent(t, key1_c);
-    fractals1 = [1, 2];
-    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
 
     % Stage 2: Calculate likelihood of chosen actions
-    frac2 = Agent(t, frac2_c);
-    key2 = Agent(t, key2_c);
-    if any(frac2 == [1, 2])
+    if any(Agent(t, frac2_c) == [1, 2])
         fractals2 = [1, 2];
     else
         fractals2 = [3, 4];
     end
     prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);
-
+    frac2 = Agent(t, frac2_c);
+    key2 = Agent(t, key2_c);
+    
     % Check outcome of trial and update values for next trial
     reward = Agent(t, reward_c);
 
