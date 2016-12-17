@@ -44,7 +44,7 @@ for agent = 1:n_agents
     beta2 = sim_par(4) * 100;
     lambda = sim_par(5) ;
     w = sim_par(6);
-    p_par = 0; % sim_par(7) / 2;
+    p_par = 0; %sim_par(7) / 2;
     k_par = 0; %sim_par(8);
     
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial

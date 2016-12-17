@@ -9,7 +9,7 @@ hour = num2str(now(4));
 minute = num2str(now(5));
 time = [hour '.' minute];
 label = 'free_agents_free_sim';
-    
+
 %% Plot all true and fitted alphas and betas against each other
 BIC = mean(genrec(:,20));
 figure

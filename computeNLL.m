@@ -1,4 +1,4 @@
-function [NLL] = computeNLL(Agent, par, common, w)
+function [NLL] = computeNLL(Agent, par, common)
 
 %% Switches
 keep_simulated_values = false;   % If true, this produce a struct Sim, which holds the simulated values of each trial
@@ -11,9 +11,7 @@ alpha2 = par(2) / 2;
 beta1 = par(3) * 100;
 beta2 = par(4) * 100;
 lambda = par(5);
-if w == -1   % (-1) is handed when w should be estimated; a value (0; 1) is handed when it should be fixed to that value
-    w = par(6);
-end
+w = par(6);
 p_par = 0; % par(7) / 2;
 k_par = 0; %par(8);
 
