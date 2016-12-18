@@ -11,7 +11,7 @@ time = [hour '.' minute];
 label = 'free_agents_free_sim';
 
 %% Plot all true and fitted values against each other
-BIC = mean(genrec(:,20));
+BIC = mean(genrec(:,NLLBICAIC_c(2)))
 figure
 for i = 1:8%length(gen_aabblwpk_c)
     subplot(3, 3, i)
@@ -24,7 +24,7 @@ saveas(gcf, ['Plots/TrueFittedAll', today, '4.png'])
 
 %% Look at difference between mb values, mf values, and combined values
 clear Agent
-agent = 1;
+agent = 3;
 agent_rows = Data(:, AgentID_c) == agent;
 Agent = Data(agent_rows, :);
 figure

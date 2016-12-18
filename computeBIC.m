@@ -13,8 +13,8 @@ beta1 = par(3) * 100;
 beta2 = par(4) * 100;
 lambda = par(5);
 w = par(6);
-p_par = par(7) * 10 - 5;
-k_par = par(8) * 10 - 5;
+p_par = par(7) * 100 - 50;
+k_par = par(8) * 100 - 50;
 
 %%% Initial fractal values
 epsilon = .00001;

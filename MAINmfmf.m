@@ -2,11 +2,12 @@
 
 %% Switches for this script (would be function argument if this were a function)
 sim_data = false;   % Should the data be simulated (true) or loaded from disk (false)?
-sim_model = 'mf';   % What model should be used for simulation / what data should be loaded?
-fit_model = 'mb';   % What model should be used for fitting?
-location = 'cluster';   % Where is this code run? Can be 'home' or 'cluster'
+sim_model = 'mb';   % What model should be used for simulation / what data should be loaded?
+fit_model = 'hyb';   % What model should be used for fitting?
+location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 
 %%% Additional stuff
+data_version = '_new';   % Can be '' (6 parameters) or '_new' (8 parameters)
 common = 0.7;   % Probability of the common transition
 fit_data = true;   % Sould the data also be fitted? Or just simulated?
 if isnan(fit_model)
@@ -43,9 +44,9 @@ if sim_data
     fractal_rewards = x(5:8,:);
     % Run simulations
     Data = simulate_task(n_agents, n_trials, sim_par, fractal_rewards, common);
-    save(['data_' sim_model '_agents_new.mat'], 'Data')
+    save(['data_' sim_model '_agents' data_version '.mat'], 'Data')
 else
-    load(['data_' sim_model '_agents_new.mat'])
+    load(['data_' sim_model '_agents' data_version '.mat'])
 end
 
 %% Fit the parameters to the Data
@@ -70,7 +71,7 @@ if fit_data
             pmax(p) = 0.5;
         end
     end
-    par0 = ones(1, length(pmin)) .* ((pmax - pmin) / 2);   % initial start values for fitting
+    par0 = ones(1, length(pmin)) .* (pmin + (pmax - pmin) / 2);   % initial start values for fitting
     n_fit = sum(fit_par == -1);   % number of parameters that are fitted (for BIC & AIC)
     n_params = length(fit_par);   % number of parameters
     
@@ -79,7 +80,7 @@ if fit_data
 
     %%% Create genrec, which will hold true and fitted parameters for each agent
     clear genrec
-    genrec = zeros(n_agents, 10);
+    genrec = zeros(n_agents, 2 * n_params + 7);
     for agent = 1:n_agents
 
         %%% Print agent number to check where we are

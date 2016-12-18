@@ -39,17 +39,17 @@ for agent = 1:n_agents
 
     % Create an individual agent
     par(rand_par) = rand(1, sum(rand_par));   % draw random numbers for these parameters
-    alpha1 = par(1) ;
-    alpha2 = par(2) ;
+    alpha1 = par(1);
+    alpha2 = par(2);
     beta1 = par(3) * 100;
     beta2 = par(4) * 100;
-    lambda = par(5) ;
+    lambda = par(5);
     w = par(6);
     if ~(p_par == 0)
-        p_par = par(7) * 10 - 5;
+        p_par = par(7) * 100 - 50;
     end
     if ~ (k_par == 0)
-        k_par = par(8) * 10 - 5;
+        k_par = par(8) * 100 - 50;
     end
     
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
