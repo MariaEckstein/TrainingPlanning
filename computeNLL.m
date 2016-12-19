@@ -1,11 +1,18 @@
-function result = computeNLL(Agent, par, n_fit, output, common, data_type)
+function result = computeNLL(Agent, par, n_fit, output, common, data_type, a1b1)
 
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
 n_params = length(par);
-alpha1 = par(1);
+if length(a1b1) >= 4
+    if strcmp(a1b1(1:4), '1a1b')
+        alpha1 = par(2);
+        beta1 = par(4) * 100;
+    end
+else
+    alpha1 = par(1);
+    beta1 = par(3) * 100;
+end
 alpha2 = par(2);
-beta1 = par(3) * 100;
 beta2 = par(4) * 100;
 lambda = par(5);
 w = par(6);
