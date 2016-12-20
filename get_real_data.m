@@ -7,6 +7,7 @@ Agent(:, frac2_c) = Agent(:, frac2_c) - 2;   % stage-2 fractals are numbered 3-6
 complete_data_rows = ~isnan(Agent(:, key1_c)) & ~isnan(Agent(:, key2_c)) & Agent(:, frac2_c) > 0;
 Agent = Agent(complete_data_rows,:);
 agentID =  fileName(length(fileName)-9:length(fileName)-7);
+agentID = str2double(agentID);
 runID = fileName(length(fileName)-4);
 switch runID
     case 'A'

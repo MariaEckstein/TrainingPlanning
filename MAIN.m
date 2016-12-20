@@ -8,7 +8,7 @@ sim_data = 'load';   % Should the data be simulated ('sim') or loaded from disk 
 sim_model = 'mb';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
 fit_model = 'mb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
-solver_algo = 'particleswarm';   % Which method is used to solve? 'fmincon' (with 80 different starts) or 'ga' (parallelization doesn't work) or 'particleswarm'?
+solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with 80 different starts) or 'ga' (parallelization doesn't work) or 'particleswarm'?
 
 %%% Additional stuff 
 data_version = '_new';   % What simulations should be loaded? Can be '' (6 parameters) or '_new' (8 parameters)
@@ -20,7 +20,6 @@ if isnan(fit_model)
     fit_data = false;
 end
 
-
 %% Prepare things
 %%% Things on cluster and at home
 if strcmp(location, 'home')
@@ -29,7 +28,7 @@ if strcmp(location, 'home')
     n_trials = 150;
     file_dir = 'C:\Users\maria\MEGAsync\TrainingPlanningProject\TwoStepTask\Results\rawdata2016';   % Where is the original data stored? 
 else
-    parpool(12);   % Specify parallel processing stuff: Can only be 2 for my old laptop; should be <= 8 on the HWNI cluster
+    parpool(6);   % Specify parallel processing stuff: Can only be 2 for my old laptop; should be <= 8 on the HWNI cluster
     n_agents = 200;
     n_fmincon_iterations = 80;
     n_trials = 201;
@@ -44,11 +43,15 @@ switch sim_data
         % Which parameters are free in the simulation (-1) and which are fixed (value)?
         switch sim_model
             case 'mf'
-                sim_par = [-1 -1 -1 -1 -1 0 -1 -1];   % a1 a2 b1 b2 l w p k
+                sim_par = [-1 -1 -1 -1 -1  0 -1 -1];   % a1 a2 b1 b2 l w p k
             case 'mb'
-                sim_par = [ 0 -1 -1 -1  0 1 -1 -1];   % a1 a2 b1 b2 l w p k
+                sim_par = [ 0 -1 -1 -1  0  1 -1 -1];   % a1 a2 b1 b2 l w p k
             case 'hyb'
-                sim_par = -1 * ones(1, 8);   % a1 a2 b1 b2 l w p k
+                fit_par = -1 * ones(1, 8);   % a1 a2 b1 b2 l w p k
+            case 'nok'
+                sim_par = [-1 -1 -1 -1 -1 -1 -1  0];   % a1 a2 b1 b2 l w p k
+            case 'nop'
+                sim_par = [-1 -1 -1 -1 -1 -1  0 -1];   % a1 a2 b1 b2 l w p k
         end
         
         % Load reward probabilities for all fractals over time
@@ -138,8 +141,8 @@ if fit_data
         NLLBICAIC = computeNLL(Agent, x, n_fit, 'all', common, sim_data, fit_model);
 
         %%% Save generated (simulated) and recovered (fitted) values in genrec
-        genrec_columns;
-        genrec(agent, agentID_c) = str2double(agentID);
+        genrec_columns; 
+        genrec(agent, agentID_c) = agentID;
         genrec(agent, run_c) = runID;
         if ~strcmp(sim_data, 'real')
             genrec(agent, gen_aabblwpk_c) = Agent(1, par_c);

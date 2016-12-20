@@ -16,8 +16,10 @@ alpha2 = par(2);
 beta2 = par(4) * 100;
 lambda = par(5);
 w = par(6);
-p_par = par(7) * 100 - 50;
-k_par = par(8) * 100 - 50;
+p_par = par(7) * 2 - 1;
+p_par = beta2 * p_par;   % p_par & k_par should be on the same scale as beta
+k_par = par(8) * 2 - 1;
+k_par = beta2 * k_par;
 
 %%% Initial fractal values
 epsilon = .00001;

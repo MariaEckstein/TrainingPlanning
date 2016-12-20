@@ -29,7 +29,6 @@ for i = 1:8%length(gen_aabblwpk_c)
     xlim([0 1])
     ylim([0 1])
 end
-saveas(gcf, ['Plots/TrueFittedAll', today, '4.png'])
 
 %% Plot results of fitting models to humans
 genrec = sortrows(genrec, [agentID_c run_c]);   % sort by agentID and runID
@@ -50,7 +49,7 @@ title(['av.BIC=' num2str(round(BIC))])
 
 %% Look at difference between mb values, mf values, and combined values
 clear Agent
-agent = 3;
+agent = 5;
 agent_rows = Data(:, AgentID_c) == agent;
 Agent = Data(agent_rows, :);
 figure
@@ -72,6 +71,3 @@ title('Q2 (mf)')
 subplot(2, 3, 6)
 plot(Agent(:,Qmb2_c))
 title('Q2 (mb)')
-saveas(gcf, ['Plots/Qs' today '_' time '_' label '.png'])
-
-end
