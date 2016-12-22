@@ -12,14 +12,10 @@ save('genrec_real_agents_hyb_sim.mat', 'genrec')
 %% Get Agent data and genrec columns names
 genrec_columns;
 data_columns;
-today = date;
-now = clock;
-hour = num2str(now(4));
-minute = num2str(now(5));
-time = [hour '.' minute];
-label = 'free_agents_free_sim';
 
 %% Plot all true and fitted values against each other
+% genrec=genrec(1:91,:)
+n_bins = 25;   % determine how fine-graned the histogram will be
 BIC = mean(genrec(:,NLLBICAIC_c(2)))
 figure
 for i = 1:8%length(gen_aabblwpk_c)
@@ -29,9 +25,13 @@ for i = 1:8%length(gen_aabblwpk_c)
     xlim([0 1])
     ylim([0 1])
 end
+subplot(3, 3, 9)   % add BIC
+histogram(genrec(:,NLLBICAIC_c(2)), n_bins)
+title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
 genrec = sortrows(genrec, [agentID_c run_c]);   % sort by agentID and runID
+[n_agents, ~] = size(genrec);
 BIC = mean(genrec(:,NLLBICAIC_c(2)))   % get average BIC per agent
 n_bins = 25;   % determine how fine-graned the histogram will be
 figure

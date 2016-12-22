@@ -1,4 +1,4 @@
-function Data = simulate_task(n_agents, n_trials, par, fractal_rewards, common)
+function Data = simulate_taskdep(n_agents, n_trials, par, fractal_rewards, common)
 
 %     n_agents = 5;
 %     n_trials = 5;
@@ -35,12 +35,12 @@ for agent = 1:n_agents
     beta2 = par(4) * 100;
     lambda = par(5);
     w = par(6);
-    p_par = par(7) * 100 - 50;
-    k_par = par(8) * 100 - 50;
-%     p_par = par(7) * 2 - 1;
-%     p_par = beta2 * p_par;
-%     k_par = par(8) * 2 - 1;
-%     k_par = beta2 * k_par;
+%     p_par = par(7) * 100 - 50;
+%     k_par = par(8) * 100 - 50;
+    p_par = par(7) * 2 - 1;
+    p_par = beta2 * p_par;
+    k_par = par(8) * 2 - 1;
+    k_par = beta2 * k_par;
 
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
     key1 = 123;
