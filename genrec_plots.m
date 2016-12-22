@@ -14,7 +14,6 @@ genrec_columns;
 data_columns;
 
 %% Plot all true and fitted values against each other
-% genrec=genrec(1:91,:)
 n_bins = 25;   % determine how fine-graned the histogram will be
 BIC = mean(genrec(:,NLLBICAIC_c(2)))
 figure

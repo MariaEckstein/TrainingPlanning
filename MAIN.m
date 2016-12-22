@@ -6,7 +6,7 @@
 %% Switches for this script (would be function argument if this were a function)
 sim_data = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
 sim_model = 'real';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+fit_model = 'l0';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
 
@@ -17,7 +17,7 @@ data_version = '_kp';   % What simulations should be loaded? Can be '' (6 parame
 common = 0.7;   % Probability of the common transition
 fit_data = true;   % Sould the data also be fitted? Or just simulated?
 if isnan(fit_model)
-    fit_data = false; 
+    fit_data = false;
 end
 %%% To name genrec file on disk
 today = date;
@@ -30,7 +30,7 @@ genrec_file_name = ['genrec_' sim_model '_agents_' fit_model '_sim_' today '_' t
 %% Prepare things
 %%% Things on cluster and at home
 if strcmp(location, 'home')
-    n_agents = 150;
+    n_agents = 100;
     n_fmincon_iterations = 3;
     n_trials = 150;
     file_dir = 'C:\Users\maria\MEGAsync\TrainingPlanningProject\TwoStepTask\Results\rawdata2016';   % Where is the original data stored? 
@@ -39,7 +39,7 @@ else
     n_agents = 100;
     n_fmincon_iterations = 30;
     n_trials = 201;
-    file_dir = 'datafiles/test';   % equal portions of the files are in folders g1-g4
+    file_dir = 'datafiles';   % Where the participant data is stored on the cluster
 end
 
 %%% Prepare the models, i.e., determine which parameters will be fitted (-1)

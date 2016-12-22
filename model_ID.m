@@ -15,4 +15,8 @@ switch model_name
         model_ID = 6;
     case 'a1b1'
         model_ID = 7;
+    case 'l0'
+        model_ID = 8;
+    case 'l1'
+        model_ID = 9;
 end
