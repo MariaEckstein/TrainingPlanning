@@ -1,5 +1,5 @@
 
-%% TDs
+%% TODO
 % Basic data cleaning (remove too fast trials; remove nans; remove trials
 % where fract2 == -2; remove strokes with the same key more than x times)
 
@@ -18,7 +18,7 @@ if isnan(fit_model)
 end
 
 %% Prepare things
-[n_agents, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location);
+[n_datasets, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location);
 genrec_file_name = name_genrec_file(sim_model, fit_model);
 model_parameters = define_model_parameters;   % Which parameters will be fitted (-1) versus fixed (values) in each model (used for sim_par and fit_par)
 
@@ -30,8 +30,9 @@ switch sim_data
         sim_par = model_parameters(model_ID(sim_model),:);
         
         % Run simulations and save 
-        Data = simulate_task(n_agents, n_trials, sim_par, fractal_rewards, common);
+        Data = simulate_task(n_datasets, n_trials, sim_par, fractal_rewards, common);
         save(['data_' sim_model '_agents.mat'], 'Data')
+        dataset = Real_data(Data);
         
     case 'load'
         load(['data_' sim_model '_agents.mat'])
@@ -39,7 +40,8 @@ switch sim_data
     case 'real'
         files = dir(file_dir);
         file_index = find(~[files.isdir]);
-        n_agents = length(file_index);
+        n_datasets = length(file_index);
+        dataset = Real_data(file_dir, file_index, files);
 end
 
 
@@ -53,13 +55,24 @@ if fit_data
     [pmin, pmax, par0, n_fit, n_params] = get_fmincon_stuff(fit_par);
     
     %%% Create genrec, which will hold (true and) fitted parameters for each agent
-    clear genrec
-    genrec = zeros(n_agents, 2 * n_params + 7);
+    genrec = zeros(n_datasets, 2 * n_params + 7);
     
-    for agent = 1:n_agents
+    for i_dataset = 1:n_datasets
 
+        [Agent, agentID, runID] = dataset.get_data(i_dataset);
+        
         %%% Select data of one agent (called "Agent")
-        [Agent, agentID, runID] = get_agent_data(sim_data, agent, files, file_index, file_dir);
+        if strcmp(sim_data, 'real')
+            file_name = files(file_index(i_dataset)).name;
+            [Agent, agentID, runID] = get_real_data(file_dir, file_name);
+        else
+            data_columns;   % Find out which columns contain what
+            agent_rows = Data(:, AgentID_c) == i_dataset;
+            Agent = Data(agent_rows, :);
+            agentID = i_dataset;
+            runID = nan;
+        end
+        
 
         %%% Find paramater values that minimize the negative log likelihood of agent data
         object_fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data, fit_model);   % define function whose minimum will be found
@@ -67,12 +80,12 @@ if fit_data
         NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data, fit_model);   % calculate NLL, BIC, and AIC for the found parameter values
 
         %%% Save generated (simulated) and recovered (fitted) values in genrec
-        genrec = save_results_to_genrec(genrec, agent, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_params);
+        genrec = save_results_to_genrec(genrec, i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_params);
         
         %%% Save genrec to disk; print agent number to the console to check where we are
-        if mod(agent, 5) == 1
+        if mod(i_dataset, 5) == 1
             save(genrec_file_name, 'genrec')
-            agent
+            i_dataset
         end
     end
     
