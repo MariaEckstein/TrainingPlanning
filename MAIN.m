@@ -67,7 +67,7 @@ if fit_data
         NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data, fit_model);   % calculate NLL, BIC, and AIC for the found parameter values
 
         %%% Save generated (simulated) and recovered (fitted) values in genrec
-        genrec = save_results_to_genrec(agent, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_params);
+        genrec = save_results_to_genrec(genrec, agent, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_params);
         
         %%% Save genrec to disk; print agent number to the console to check where we are
         if mod(agent, 5) == 1
