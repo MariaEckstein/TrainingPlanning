@@ -32,7 +32,7 @@ switch sim_data
         % Run simulations and save 
         Data = simulate_task(n_datasets, n_trials, sim_par, fractal_rewards, common);
         save(['data_' sim_model '_agents.mat'], 'Data')
-        dataset = Real_data(Data);
+        dataset = Simulated_data(Data);
         
     case 'load'
         load(['data_' sim_model '_agents.mat'])
@@ -60,19 +60,6 @@ if fit_data
     for i_dataset = 1:n_datasets
 
         [Agent, agentID, runID] = dataset.get_data(i_dataset);
-        
-        %%% Select data of one agent (called "Agent")
-        if strcmp(sim_data, 'real')
-            file_name = files(file_index(i_dataset)).name;
-            [Agent, agentID, runID] = get_real_data(file_dir, file_name);
-        else
-            data_columns;   % Find out which columns contain what
-            agent_rows = Data(:, AgentID_c) == i_dataset;
-            Agent = Data(agent_rows, :);
-            agentID = i_dataset;
-            runID = nan;
-        end
-        
 
         %%% Find paramater values that minimize the negative log likelihood of agent data
         object_fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data, fit_model);   % define function whose minimum will be found
