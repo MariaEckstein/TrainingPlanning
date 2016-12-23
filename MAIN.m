@@ -4,13 +4,14 @@
 % where fract2 == -2; remove strokes with the same key more than x times)
 
 %% Switches for this script (would be function argument if this were a function)
-sim_data = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = 'real';   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
-fit_model = 'a1b1_nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+sim_model = 'mb';   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
+fit_model = 'mb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
 
 %%% Additional stuff 
+n_workers = 12;   % Number of workers on cluster
 common = 0.7;   % Probability of the common transition
 fit_data = true;   % Sould the data also be fitted? Or just simulated?
 if isnan(fit_model)
@@ -18,30 +19,25 @@ if isnan(fit_model)
 end
 
 %% Prepare things
-[n_datasets, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location);
+[n_datasets, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location, n_workers);
 genrec_file_name = name_genrec_file(sim_model, fit_model);
-model_parameters = define_model_parameters;   % Which parameters will be fitted (-1) versus fixed (values) in each model (used for sim_par and fit_par)
+model_parameters = define_model_parameters();   % Which parameters will be fitted (-1) versus fixed (values) in each model (used for sim_par and fit_par)
 
 %% Simulate / Load Data
 switch sim_data
     case 'sim'
         
-        % Which parameters are free in the simulation (-1) and which are fixed (value)?
-        sim_par = model_parameters(model_ID(sim_model),:);
-        
-        % Run simulations and save 
-        Data = simulate_task(n_datasets, n_trials, sim_par, fractal_rewards, common);
+        dataset = Simulated_data(n_datasets, n_trials, sim_model, common);
+        Data = dataset.Data;
         save(['data_' sim_model '_agents.mat'], 'Data')
-        dataset = Simulated_data(Data);
         
     case 'load'
         load(['data_' sim_model '_agents.mat'])
+        dataset = Simulated_data(Data);
         
     case 'real'
-        files = dir(file_dir);
-        file_index = find(~[files.isdir]);
-        n_datasets = length(file_index);
-        dataset = Real_data(file_dir, file_index, files);
+        dataset = Real_data(file_dir);
+        n_datasets = dataset.n_datasets;
 end
 
 

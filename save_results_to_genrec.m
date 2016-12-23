@@ -1,5 +1,6 @@
 function genrec = save_results_to_genrec(genrec, agent, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_params)
 
+data_columns;
 genrec_columns;   % what info is located in which column?
 genrec(agent, [agentID_c run_c]) = [agentID runID];
 if ~strcmp(sim_data, 'real')

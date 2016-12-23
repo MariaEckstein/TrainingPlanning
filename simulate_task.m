@@ -1,4 +1,4 @@
-function Data = simulate_task(n_agents, n_trials, par, fractal_rewards, common)
+function Data = simulate_task(n_agents, n_trials, par, common)
 
 %     n_agents = 5;
 %     n_trials = 5;
