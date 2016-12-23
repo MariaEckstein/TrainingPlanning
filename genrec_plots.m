@@ -1,13 +1,13 @@
 function genrec_plots(Data, genrec)
 
 %% Put dataframes together
-genrec_all = [];
-for fileID = 1:4
-    load(['genrec_real_agents_hyb_sim' num2str(fileID) '.mat'])
-    genrec_all = [genrec_all; genrec];
-end
-genrec = genrec_all;
-save('genrec_real_agents_hyb_sim.mat', 'genrec')
+% genrec_all = [];
+% for fileID = 1:4
+%     load(['genrec_real_agents_hyb_sim' num2str(fileID) '.mat'])
+%     genrec_all = [genrec_all; genrec];
+% end
+% genrec = genrec_all;
+% save('genrec_real_agents_hyb_sim.mat', 'genrec')
 
 %% Get Agent data and genrec columns names
 genrec_columns;
@@ -29,15 +29,15 @@ histogram(genrec(:,NLLBICAIC_c(2)), n_bins)
 title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
+genrec = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
 genrec = sortrows(genrec, [agentID_c run_c]);   % sort by agentID and runID
 [n_agents, ~] = size(genrec);
 BIC = mean(genrec(:,NLLBICAIC_c(2)))   % get average BIC per agent
-n_bins = 25;   % determine how fine-graned the histogram will be
+n_bins = 15;   % determine how fine-graned the histogram will be
 figure
 for i = 1:8   % plot parameters
     subplot(3, 3, i)
     histogram(genrec(:, rec_aabblwpk_c(i)), n_bins)
-    lsline
     xlim([0 1])
     ylim([0 n_agents])
 end

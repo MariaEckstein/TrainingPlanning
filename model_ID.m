@@ -19,4 +19,14 @@ switch model_name
         model_ID = 8;
     case 'l1'
         model_ID = 9;
+    case 'nok_l1'
+        model_ID = 10;
+    case 'nok_l0'
+        model_ID = 11;
+    case 'nok_mf'
+        model_ID = 12;
+    case 'nok_mb'
+        model_ID = 13;
+    case 'a1b1_nok'
+        model_ID = 14;
 end

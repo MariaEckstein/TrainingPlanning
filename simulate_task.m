@@ -16,6 +16,10 @@ epsilon = 0.000001;
 %%% Find out which parameters are given and which should be free in each agent
 rand_par = par == -1;   % check which parameters should vary between agents
 
+%%% Load reward probabilities for all fractals over time
+load('list1.mat');
+fractal_rewards = x(5:8,:);        
+
 %% Simulate a bunch of agents
 for agent = 1:n_agents
     a = (agent - 1) * n_trials + 1;   % get first row of this agent in Data
