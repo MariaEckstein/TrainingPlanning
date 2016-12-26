@@ -2,7 +2,8 @@ classdef (Abstract) Dataset
     %UNTITLED7 Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
+    properties (Abstract)
+        number
     end
     
     methods (Abstract)

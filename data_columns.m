@@ -1,4 +1,5 @@
 %% Data columns
+n_params = 8;
 AgentID_c = 1;
 frac1_c = 2;
 frac2_c = 3;

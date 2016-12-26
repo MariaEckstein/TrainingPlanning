@@ -1,4 +1,5 @@
 .idea/
+GenrecAndData/
 old/
-matlab_workspace.mat
+Plots/
 *.mat

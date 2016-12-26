@@ -3,10 +3,12 @@ classdef Real_data < Dataset
     %   Detailed explanation goes here
     
     properties
+        number
+        sim_model
         file_dir
         file_index
         files
-        n_datasets
+        sim_data
     end
     
     methods
@@ -15,7 +17,9 @@ classdef Real_data < Dataset
             obj.file_dir = file_dir;
             obj.files = dir(file_dir);
             obj.file_index = find(~[obj.files.isdir]);
-            obj.n_datasets = length(obj.file_index);    
+            obj.number = length(obj.file_index);
+            obj.sim_model = nan;
+            obj.sim_data = 'load';
         end
         
         function [Agent, agentID, runID] = get_data(self, i_dataset)

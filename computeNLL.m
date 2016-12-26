@@ -11,12 +11,6 @@ lambda = par(5);
 w = par(6);
 p_par = par(7) * 200 - 100;
 k_par = par(8) * 200 - 100;
-% p_par = par(7) * 100 - 50;
-% k_par = par(8) * 100 - 50;
-% p_par = par(7) * 2 - 1;
-% p_par = beta2 * p_par;
-% k_par = par(8) * 2 - 1;
-% k_par = beta2 * k_par;
 if length(a1b1) >= 4
     if strcmp(a1b1(1:4), '1a1b')
     end
