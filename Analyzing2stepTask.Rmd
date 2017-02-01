@@ -40,12 +40,13 @@ After completing the experiment, some subjects reported that they had explored t
             ##                                  ##
             ######################################
 
-data_source = "2016from_scratch"        # can be either 'empirical' (2015 data) or 'simulations' or 2016 (2016 data)
+data_source = "2016from_scratch"        # can be either 'empirical' (2015 data) or 'simulations' or 2016 (2016 data) or '2016from_scratch' (data from Berkeley XLab)?
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 ggsave_figures = F                      # Save figures as pngs onto the computer?
 preprocess_data = F
-figure_dir = "C:/Users/maria/MEGAsync/GSN/Wunderlich Lab/TrainingPlanningProject/Figures"
-data_dir = "C:/Users/maria/MEGAsync/GSN/Wunderlich Lab/TrainingPlanningProject/BerkeleyData/TwoStep"
+home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
+figure_dir = file.path(home_dir, "Figures")
+data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
 limits.stage1_choice_variation = 0.15   # Limit to exclude the whole 2-step task from one subject: Minimal necessary percentage of chosing the less-chosen 1st-stage stimulus, throughout a session. If a subject choses the less-chosen stimulus in less than 'limits.stage1_choice_variation' percent of trials (and choses the more-chosen stimulus more that '1 - limits.stage1_choice_variation'), than this subject will be excluded from further analyses. Set 'limits.stage1_choice_variation' to 0 if no subjects should be excluded.
 limits.key_perseverance_trials = 7      # Limit to exclude individual trials: In how many trials in a row may a subject press the same button without theses trials being excluded?
 limits.key_perseverance_subjects = 0.7   # Limit to exclude the whole 2-step task from one subject: What fraction of trials can a subject have excluded at most due to key perseverange (see above) without being exluded? That is, if subject data still contains (1 - limits.key_perseverance_subjects) percent of trials after key perseverance cleaning, they will remain in the data set; if they have less than limits.key_perseverance_subjects data points after cleaning, they will be removed completely.
@@ -58,8 +59,7 @@ limits.subject_fast_trials = 0.7         # Limit to exclude the whole 2-step tas
 ### LOAD PACKAGES ###
 #####################
 
-setwd("C:/Users/maria/MEGAsync/GSN/Wunderlich Lab/TrainingPlanningProject")
-source("TP_functions.R")
+source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
 library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); library("reshape"); library("R.matlab"); library("simpleboot"); library("car"); library("mlogit"); library("zoo")
 library("ggplot2"); theme_set(theme_bw())
 ```
@@ -90,7 +90,6 @@ library("ggplot2"); theme_set(theme_bw())
 # % 15. common (0) or uncommon (1) transition
 
 ## Read in empirical and simulated 2-step data
-source("TP_functions.R")
 
 if (data_source == "2016from_scratch" & preprocess_data) {
   all_files = data.frame(trial = NA, key1 = NA, key2 = NA, choice1 = NA, choice2 = NA, pair2 = NA, RT1 = NA, RT2 = NA, ITI = NA, reward = NA, stim1_l = NA, stim1_r = NA, stim2_l = NA, stim2_r = NA, uncommon_trans = NA, SubjID = NA, session = NA, run = NA)[0,]
@@ -98,7 +97,7 @@ if (data_source == "2016from_scratch" & preprocess_data) {
   filenames = list.files(data_dir, pattern = "[A-Z].mat")
   for (filename in filenames) {
     ### Read in the data files and get it in the right shape
-    subj_file = as.data.frame(readMat(paste(data_dir, filename, sep = "/"))$params[[5]][[1]])
+    subj_file = as.data.frame(readMat(file.path(data_dir, filename))$params[[5]][[1]])
     # Get column names right
     colnames(subj_file) = c("trial", "key1", "key2", "choice1", "choice2", "pair2", "RT1", "RT2", "ITI", "reward", "stim1_l", "stim1_r", "stim2_l", "stim2_r", "uncommon_trans")
     # Get Subject and session number and add to subj_file
@@ -112,9 +111,9 @@ if (data_source == "2016from_scratch" & preprocess_data) {
     # Add subj_file to all_files
     all_files = rbind(all_files, subj_file)
   }
-  write.csv(all_files, paste(data_dir, "all_files.csv", sep = "/"), row.names = F)
+  write.csv(all_files, file.path(data_dir, "all_files.csv"), row.names = F)
 }
-all_files = read.csv(paste(data_dir, "all_files.csv", sep = "/"))
+all_files = read.csv(file.path(data_dir, "all_files.csv"))
 
 # Get column classes right (cannot rename reward ("Reward", "NoReward") and transition because otherwise later things crash)
 all_files$session = factor(all_files$session, levels = c(1, 2), labels = c("Session 1", "Session 2"))
@@ -215,9 +214,7 @@ included_subj = ddply(ts,      .(SubjID, session, run), summarize, whatever = NA
 all_subj      = ddply(ts_orig, .(SubjID, session, run), summarize, whatever = NA)
 excluded_subj = anti_join(all_subj, included_subj)
 excluded_subj = add_group_columns(excluded_subj)
-attach(excluded_subj)
-excluded_subj = excluded_subj[order(session, run, SubjID),c(2,3,1,5)]
-detach(excluded_subj)
+excluded_subj = excluded_subj[order(excluded_subj$session, excluded_subj$run, excluded_subj$SubjID), 1:3]
 
 ## Fix runs for subj 106 (got versions A and B in the second session instead of C and D!!!)
 ts$run[ts$session == "Session 2" & ts$run == "Run 1"] = "Run 3"
@@ -235,7 +232,7 @@ stay_dat  = ddply(subset(ts, !is.na(reward_prev_trial) & subj_run_persev == F),
                   stay_prob = mean(stay_first_stage, na.rm = T))
 
 if (data_source == 2016 | data_source == "2016from_scratch") {
-  stay_dat$reward = factor(stay_dat$reward, levels = c("1", "0"), labels = c("Reward", "No reward"))
+  # stay_dat$reward = factor(stay_dat$reward, levels = c("1", "0"), labels = c("Reward", "No reward"))
   stay_dat$reward_prev_trial = factor(stay_dat$reward_prev_trial, levels = c("1", "0"), labels = c("Reward", "No reward"))
   stay_dat$transi_prev_trial = factor(stay_dat$transi_prev_trial, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
   
@@ -245,21 +242,16 @@ if (data_source == 2016 | data_source == "2016from_scratch") {
   ts$uncommon_trans = factor(ts$uncommon_trans, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
 }
 
-# ts_sim_no_nas = subset(ts_sim, !is.na(reward_prev_trial))
-# stay_dat_sim  = ddply(ts_sim_no_nas, .(SubjID, session, run, transi_prev_trial, reward_prev_trial, training), summarize,
-#                   stays = sum(stay_first_stage, na.rm = T),
-#                   trials = length(stay_first_stage),
-#                   stay_prob = mean(stay_first_stage, na.rm = T))
 ```
 
 ### Preprocessing results
 
 ```{r, echo = F, warning = F}
-gg_choice_variation = ggplot(choice_variation, aes(SubjID, variation1)) +
+gg_choice_variation = ggplot(choice_variation, aes(SubjID, 100 * variation1)) +
   geom_point(aes(color = variation1 > (1 - limits.stage1_choice_variation) | variation1 < limits.stage1_choice_variation)) +
   scale_color_manual(values = c("black", "red")) +
-  geom_hline(yintercept = (1 - limits.stage1_choice_variation), color = "red") +
-  geom_hline(yintercept = limits.stage1_choice_variation, color = "red") +
+  geom_hline(yintercept = (100 - 100 * limits.stage1_choice_variation), color = "red") +
+  geom_hline(yintercept = 100 *limits.stage1_choice_variation, color = "red") +
   geom_text(aes(label = ifelse(variation1 > (1 - limits.stage1_choice_variation) | variation1 < limits.stage1_choice_variation, SubjID, "")), hjust = 0, vjust = 0, size = 3) +
   facet_wrap( ~ run) +
   theme(legend.position = "none") +
@@ -304,22 +296,6 @@ A model-based 2-step strategy, on the other hand, is characterized by a very dif
 
 We tested whether the model-free and model-based training groups exhibited the expected strategies by analyzing switch-stay patterns in dependence of reward on previous trial (*reward* or *no reward*) and transition type on previous trial (*common* or *rare*), two weeks after each group had received the training (figure 1). 
 
-```{r, echo = F, fig.height = 4, fig.width = 3.5, fig.cap = "What model-based and model-free strategies in the 2-step task should look like."}
-
-sim_dat_mb = expand.grid(Strategy = "Model-based", Transition = c("Common", "Rare"), Reward = c("Reward", "No reward"))
-sim_dat_mf = expand.grid(Strategy = "Model-free", Transition = c("Common", "Rare"),  Reward = c("Reward", "No reward"))
-sim_dat_mf$stay_prob = c(.8, .8, .6, .6)
-sim_dat_mb$stay_prob = c(.8, .6, .6, .8)
-sim_dat = as.data.frame(rbind(sim_dat_mb, sim_dat_mf))
-
-ggplot(sim_dat, aes(Reward, stay_prob, fill = Transition)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(x = "", y = "Stay probability") +
-  scale_y_discrete(breaks = NULL) +
-  coord_cartesian(ylim = c(.5, 1)) +
-  theme(legend.position = c(.1, .9), legend.background = element_rect(fill = "transparent")) +
-  facet_grid(~ Strategy)
-```
 
 ```{r, echo = F, fig.cap = "Switch-stay analysis of the 2-step task, for each run during the training. Fist plot: Only considering the training received in the first session. Second plot: each training group separately."}
 ### Prepare data: subtract each particiapnt's mean stay probabilities
@@ -510,8 +486,9 @@ gg_logodds_pic = ggplot(log_odds_sim_dat, aes(effect, log_odds)) +
 # exclude subjects only based on performance!
 # And/or look carefully at outliers!
 
+source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
+
 ### Logistic regression stay_either ~ reward_prev_trial + transi_prev_trial + interaction
-source("TP_functions.R")
 both_logist_regr_data         = create_logist_regr_data(dat = ts, number.discarded.trials = 20)
 logist_regr_data              = both_logist_regr_data[[1]]
 logist_regr_data_with_correct = both_logist_regr_data[[2]]
@@ -683,7 +660,6 @@ for (runi in unique(logist_regr_data_AICs$run)) {
 ### "Classic" plot (stay ~ reward * transition)
 
 ## Create data
-source("TP_functions.R")
 class_and_new_lagged_effects = create_lagged_regr_data(dat = ts)
 class_lagged_effects         = add_group_columns(class_and_new_lagged_effects[[1]])
 class_smooth_lagged_effects  = create_smooth_lagged_effects(dat = class_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
@@ -913,7 +889,6 @@ We used a genetic algorithm (Matlab's `ga` function) in combination with a minim
 ## GET PARAMETER DATA ##
 ########################
 
-source("TP_functions.R")
 # ts_params_all     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabblpkw.csv"), params = "ALL", num_par = 8)
 # ts_params_all     = subset(ts_params_all, run == "Run 2")
 # ts_params_1alpha  = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abblpkw.csv"), params = "1a", num_par = 7)
