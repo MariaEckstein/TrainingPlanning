@@ -15,17 +15,17 @@ data_columns;
 
 %% Plot all true and fitted values against each other
 n_bins = 25;   % determine how fine-graned the histogram will be
-BIC = mean(genrec(:,NLLBICAIC_c(2)))
+BIC = mean(genrec_dat(:,NLLBICAIC_c(2)))
 figure
 for i = 1:8%length(gen_aabblwpk_c)
     subplot(3, 3, i)
-    scatter(genrec(:, gen_aabblwpk_c(i)), genrec(:, rec_aabblwpk_c(i)))
+    scatter(genrec_dat(:, gen_aabblwpk_c(i)), genrec_dat(:, rec_aabblwpk_c(i)))
     lsline
     xlim([0 1])
     ylim([0 1])
 end
 subplot(3, 3, 9)   % add BIC
-histogram(genrec(:,NLLBICAIC_c(2)), n_bins)
+histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
 title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
@@ -46,6 +46,17 @@ histogram(genrec(:,NLLBICAIC_c(2)), n_bins)
 ylim([0 n_agents])
 title(['av.BIC=' num2str(round(BIC))])
 
+%% Save results as csv
+s = what;
+matfiles = s.mat;
+for i = 1:numel(matfiles)
+    file_name = char(matfiles(i));
+    if strcmp(file_name(1:6), 'genrec')
+        new_file_name = [file_name(1:end-3) 'csv'];
+        csvwrite(new_file_name, genrec)
+    end
+end
+            
 %% Look at difference between mb values, mf values, and combined values
 clear Agent
 agent = 5;

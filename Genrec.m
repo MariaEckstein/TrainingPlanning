@@ -30,6 +30,10 @@ classdef Genrec < handle
             save(self.file_name, 'genrec_dat')
         end
         
+        function genrec_dat = read_data(self)
+            genrec_dat = self.Data;
+        end            
+        
     end
     
 end
