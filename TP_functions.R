@@ -129,13 +129,6 @@ read_in_2step = function(data) {
 }
 
 
-create_prev_rewards_and_transitions_2step = function(dat = ts) {
-  
-  # dat$stay_first_stage      = factor(dat$stay_first_stage, levels = c(0, 1))
-  
-  dat
-}
-
 create_lagged_regr_data = function(dat = ts) {
   
   #  The model uses a set of 4 predictors at each lag, each of which captures how a given combination of transition (common/rare) and outcome (rewarded/not) predicts whether the agent will repeat the choice a given number of trials in the future. E.g, the 'rewarded, rare' predictor at lag -2 captures the extent to which receiving a reward following a rare transition predicts that the agent will choose the same action two trials later.

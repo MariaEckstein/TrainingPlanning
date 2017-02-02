@@ -44,6 +44,7 @@ data_source = "2016from_scratch"        # can be either 'empirical' (2015 data) 
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 ggsave_figures = F                      # Save figures as pngs onto the computer?
 preprocess_data = F
+only_first_half = T
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "Figures")
 data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
@@ -92,7 +93,7 @@ library("ggplot2"); theme_set(theme_bw())
 
 ## Read in empirical and simulated 2-step data
 
-if (data_source == "2016from_scratch" & preprocess_data) {
+if (data_source %in% c("2016from_scratch", "2016first_half") & preprocess_data) {
   all_files = data.frame(trial = NA, key1 = NA, key2 = NA, choice1 = NA, choice2 = NA, pair2 = NA, RT1 = NA, RT2 = NA, ITI = NA, reward = NA, stim1_l = NA, stim1_r = NA, stim2_l = NA, stim2_r = NA, uncommon_trans = NA, SubjID = NA, session = NA, run = NA)[0,]
   
   filenames = list.files(data_dir, pattern = "[A-Z].mat")
@@ -115,6 +116,10 @@ if (data_source == "2016from_scratch" & preprocess_data) {
   write.csv(all_files, file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")), row.names = F)
 }
 all_files = read.csv(file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")))
+
+if (only_first_half == T) {
+  all_files = subset(all_files, SubjID < 150)
+}
 
 # Get column classes right (cannot rename reward ("Reward", "NoReward") and transition because otherwise later things crash)
 all_files$session = factor(all_files$session, levels = c(1, 2), labels = c("Session 1", "Session 2"))
@@ -378,94 +383,112 @@ if (ggsave_figures) {
 ```{r, echo = F, fig.cap = "Regression on all data sets. Do reward, transition, and their interaction predict stay probabilities?"}
 ### Switch-stay stats
 # Only looking at the first training (runs1-3)
-switch_stay_stats_s1 = data.frame(run = NA, training_s1 = NA, predictor = NA, chisq = NA, p = NA)[0,]
-row = 1
-for (runi in unique(stay_dat$run)) {
-  for (traini in unique(stay_dat$training_s1)) {
-    model_dat = subset(stay_dat, run == runi & training_s1 == traini & !is.na(reward_prev_trial)) #
-    
-    if (!empty(model_dat)) {
-      bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
-      rew = update(bas, .~. + reward_prev_trial)
-      tra = update(rew, .~. + transi_prev_trial)
-      int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
-      a = anova(bas, rew, tra, int)
+if (preprocess_data) {
+  switch_stay_stats = data.frame(run = NA, training = NA, predictor = NA, z = NA, p = NA)[0,]
+  row = 1
+  for (runi in unique(stay_dat$run)) {
+    for (traini in unique(stay_dat$training)) {
+      model_dat = subset(ts, run == runi & training == traini)
+      model_dat$SubjID = factor(model_dat$SubjID)
+      model_dat$stay_first_stage = factor(model_dat$stay_first_stage)
+      contrasts(model_dat$reward_prev_trial) = c(-1, 1)
+      contrasts(model_dat$transi_prev_trial) = c(-1, 1)
       
-      switch_stay_stats_s1[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
-      switch_stay_stats_s1[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
-      switch_stay_stats_s1[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
-      
-      row = row + 3
+      if (!empty(model_dat)) {
+        mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial + (reward_prev_trial * transi_prev_trial | SubjID),
+              family = binomial, control = glmerControl(optimizer = "bobyqa"),
+              data = model_dat)
+        ano = Anova(mod, type = 3)
+        
+        switch_stay_stats[row,]   = c(runi, traini, "rew", coefficients(summary(mod))[2, 3], coefficients(summary(mod))[2, 4])
+        switch_stay_stats[row+1,] = c(runi, traini, "tra", coefficients(summary(mod))[3, 3], coefficients(summary(mod))[3, 4])
+        switch_stay_stats[row+2,] = c(runi, traini, "int", coefficients(summary(mod))[4, 3], coefficients(summary(mod))[4, 4])
+        
+        row = row + 3
+      }
     }
   }
+  switch_stay_stats$z = as.numeric(switch_stay_stats$z)
+  switch_stay_stats$predictor = factor(switch_stay_stats$predictor, levels = c("rew", "tra", "int"))
+  switch_stay_stats$sig = "ns"
+  switch_stay_stats$sig[switch_stay_stats$p <= 0.05] = "sig"
+  
+  write.csv(switch_stay_stats, file.path(data_dir, paste("switch_stay_stats", data_source, ".csv", sep = "")), row.names = F)
+} else {
+  switch_stay_stats = read.csv(file.path(data_dir, paste("switch_stay_stats", data_source, ".csv", sep = "")))
 }
-switch_stay_stats_s1$chisq = as.numeric(switch_stay_stats_s1$chisq)
-switch_stay_stats_s1$predictor = factor(switch_stay_stats_s1$predictor, levels = c("rew", "tra", "int"))
-switch_stay_stats_s1$sig = "ns"
-switch_stay_stats_s1$sig[switch_stay_stats_s1$p <= 0.05] = "sig"
-
-# For the five separate training groups
-switch_stay_stats = data.frame(run = NA, training = NA, predictor = NA, chisq = NA, p = NA)[0,]
-row = 1
-for (runi in unique(stay_dat$run)) {
-  for (traini in unique(stay_dat$training)) {
-    model_dat = subset(stay_dat, run == runi & training == traini & !is.na(reward_prev_trial)) #
-    
-    if (!empty(model_dat)) {
-      bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
-      rew = update(bas, .~. + reward_prev_trial)
-      tra = update(rew, .~. + transi_prev_trial)
-      int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
-      a = anova(bas, rew, tra, int)
-      
-      switch_stay_stats[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
-      switch_stay_stats[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
-      switch_stay_stats[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
-      
-      row = row + 3
-    }
-  }
-}
-switch_stay_stats$chisq = as.numeric(switch_stay_stats$chisq)
-switch_stay_stats$predictor = factor(switch_stay_stats$predictor, levels = c("rew", "tra", "int"))
-switch_stay_stats$sig = "ns"
-switch_stay_stats$sig[switch_stay_stats$p <= 0.05] = "sig"
+# switch_stay_stats_s1 = data.frame(run = NA, training_s1 = NA, predictor = NA, chisq = NA, p = NA)[0,]
+# row = 1
+# for (runi in unique(stay_dat$run)) {
+#   for (traini in unique(stay_dat$training_s1)) {
+#     model_dat = subset(stay_dat, run == runi & training_s1 == traini & !is.na(reward_prev_trial)) #
+#     
+#     if (!empty(model_dat)) {
+#       bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
+#       rew = update(bas, .~. + reward_prev_trial)
+#       tra = update(rew, .~. + transi_prev_trial)
+#       int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
+#       a = anova(bas, rew, tra, int)
+#       
+#       switch_stay_stats_s1[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
+#       switch_stay_stats_s1[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
+#       switch_stay_stats_s1[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
+#       
+#       row = row + 3
+#     }
+#   }
+# }
+# switch_stay_stats_s1$chisq = as.numeric(switch_stay_stats_s1$chisq)
+# switch_stay_stats_s1$predictor = factor(switch_stay_stats_s1$predictor, levels = c("rew", "tra", "int"))
+# switch_stay_stats_s1$sig = "ns"
+# switch_stay_stats_s1$sig[switch_stay_stats_s1$p <= 0.05] = "sig"
+# 
+# # For the five separate training groups
+# switch_stay_stats = data.frame(run = NA, training = NA, predictor = NA, chisq = NA, p = NA)[0,]
+# row = 1
+# for (runi in unique(stay_dat$run)) {
+#   for (traini in unique(stay_dat$training)) {
+#     model_dat = subset(stay_dat, run == runi & training == traini & !is.na(reward_prev_trial)) #
+#     
+#     if (!empty(model_dat)) {
+#       bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
+#       rew = update(bas, .~. + reward_prev_trial)
+#       tra = update(rew, .~. + transi_prev_trial)
+#       int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
+#       a = anova(bas, rew, tra, int)
+#       
+#       switch_stay_stats[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
+#       switch_stay_stats[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
+#       switch_stay_stats[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
+#       
+#       row = row + 3
+#     }
+#   }
+# }
+# switch_stay_stats$chisq = as.numeric(switch_stay_stats$chisq)
+# switch_stay_stats$predictor = factor(switch_stay_stats$predictor, levels = c("rew", "tra", "int"))
+# switch_stay_stats$sig = "ns"
+# switch_stay_stats$sig[switch_stay_stats$p <= 0.05] = "sig"
 
 ### Plots
 # 3 groups
-gg_overall_stats_s1 = ggplot(subset(switch_stay_stats_s1), aes(predictor, chisq, shape = sig)) +
-  geom_point(color = "darkblue") +
-  scale_shape_manual(values = c(1, 16)) +
-  geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 2), "")), hjust = 0, vjust = 0, size = 3) +
-  labs(x = "", y = "Chi squared") +
-  theme(legend.position = "none") +
-  facet_grid(training_s1 ~ run)
-gg_overall_stats_s1
+# gg_overall_stats_s1 = ggplot(subset(switch_stay_stats_s1), aes(predictor, chisq, shape = sig)) +
+#   geom_point(color = "darkblue") +
+#   scale_shape_manual(values = c(1, 16)) +
+#   geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 2), "")), hjust = 0, vjust = 0, size = 3) +
+#   labs(x = "", y = "Chi squared") +
+#   theme(legend.position = "none") +
+#   facet_grid(training_s1 ~ run)
+# gg_overall_stats_s1
 # 5 groups
-gg_overall_stats = ggplot(switch_stay_stats, aes(predictor, chisq, shape = sig)) +
+gg_overall_stats = ggplot(switch_stay_stats, aes(predictor, z, shape = sig)) +
   geom_point(color = "darkblue") +
   scale_shape_manual(values = c(1, 16)) +
   geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 2), "")), hjust = 0, vjust = 0, size = 3) +
-  labs(x = "", y = "Chi squared") +
+  labs(x = "", y = "z") +
   theme(legend.position = "none") +
   facet_grid(training ~ run)
 gg_overall_stats
-
-# baseline_model = lme(stay_prob ~ 1, random = ~1|SubjID, data = subset(stay_dat, run == "Run 2" & session == "Session 2"), method = "ML")
-# training_model = update(baseline_model, .~. + training)
-# reward_model = update(training_model, .~. + reward_prev_trial)
-# transition_model = update(reward_model, .~. + transi_prev_trial)
-# training_reward_model = update(transition_model, .~. + training:reward_prev_trial)
-# training_transition_model = update(training_reward_model, .~. + training:transi_prev_trial)
-# transition_reward_model = update(training_transition_model, .~. + reward_prev_trial:transi_prev_trial)
-# training_reward_transition_model = update(transition_reward_model, .~. + training*reward_prev_trial*transi_prev_trial)
-# full_model = update(baseline_model, .~. + training*reward_prev_trial*transi_prev_trial)
-# # Evaluate models
-# regression_r2 = anova(baseline_model,
-#                training_model, reward_model, transition_model,
-#                training_reward_model, training_transition_model, transition_reward_model,
-#                training_reward_transition_model,
-#                full_model)
 ```
 
 ### Logistic regression (switch_stay ~ stay + reward + transition + interaction + correct)
@@ -667,17 +690,25 @@ if (preprocess_data) {
   lagged_switch_stay_smooth    = create_smooth_lagged_effects(dat = lagged_switch_stay, name = "lagged_switch_stay", number_of_iterations = 1)
   colnames(lagged_switch_stay_smooth)[colnames(lagged_switch_stay_smooth) %in% c("log_odds", "sd_log_odds", "smooth_log_odds")] = c("stay_percent", "sd_stay_percent", "smooth_stay_percent")
   lagged_switch_stay_stage2    = add_group_columns(class_and_new_lagged_effects[[4]])
-  write.csv(class_lagged_effects, file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv")), row.names = F)
-  write.csv(class_smooth_lagged_effects, file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv")), row.names = F)
-  write.csv(lagged_switch_stay, file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv")), row.names = F)
-  write.csv(lagged_switch_stay_smooth, file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv")), row.names = F)
-  write.csv(lagged_switch_stay_stage2, file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv")), row.names = F)
+  new_lagged_effects        = add_group_columns(class_and_new_lagged_effects[[2]])
+  new_smooth_lagged_effects = create_smooth_lagged_effects(dat = new_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
+  
+  write.csv(class_lagged_effects, file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(class_smooth_lagged_effects, file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(lagged_switch_stay, file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(lagged_switch_stay_smooth, file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(lagged_switch_stay_stage2, file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(new_lagged_effects, file.path(data_dir, paste("new_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(new_smooth_lagged_effects, file.path(data_dir, paste("new_smooth_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
+  
 } else {
-  class_lagged_effects         = read.csv(file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv")))
-  class_smooth_lagged_effects  = read.csv(file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv")))
-  lagged_switch_stay           = file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv"))
-  lagged_switch_stay_smooth    = file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv"))
-  lagged_switch_stay_stage2    = read.csv(file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv")))
+  class_lagged_effects         = read.csv(file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv", sep = "")))
+  class_smooth_lagged_effects  = read.csv(file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv", sep = "")))
+  lagged_switch_stay           = read.csv(file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv", sep = "")))
+  lagged_switch_stay_smooth    = read.csv(file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv", sep = "")))
+  lagged_switch_stay_stage2    = read.csv(file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv", sep = "")))
+  new_lagged_effects           = read.csv(file.path(data_dir, paste("new_lagged_effects_", data_source, ".csv", sep = "")))
+  new_smooth_lagged_effects    = read.csv(file.path(data_dir, paste("new_smooth_lagged_effects_", data_source, ".csv", sep = "")))
 }
 
 ## Plots
@@ -792,8 +823,6 @@ gg_lagged_logodds_smooth = ggplot(subset(class_smooth_lagged_effects, condition 
 ### Integrate key perseverance
 
 # Create data
-new_lagged_effects        = add_group_columns(class_and_new_lagged_effects[[2]])
-new_smooth_lagged_effects = create_smooth_lagged_effects(dat = new_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
 
 # Plot
 new_lagged_regr_plot_dat = subset(new_lagged_effects, abs(log_odds) < quantile(abs(log_odds), 0.95, na.rm = T))
@@ -922,6 +951,9 @@ for (file_name in file_names) {
 }
 ts_params = subset(ts_params, run %in% 1:4)
 ts_params$run = paste("Run", ts_params$run)
+if (only_first_half == T) {
+  ts_params = subset(ts_params, SubjID < 105)
+}
 
 ### Exclude bad subjects
 ts_params$excluded = FALSE
@@ -971,8 +1003,10 @@ hist(lmer_dat1$BIC_z); shapiro.test(lmer_dat1$BIC_z) # not normal
 hist(lmer_dat1$BIC_zis); shapiro.test(lmer_dat1$BIC_zis) # not normal and no transformation helps
 with(lmer_dat1, tapply(BIC, params, var)); bartlett.test(lmer_dat1$BIC, lmer_dat1$params) # variances are equal -> good
 # hyb_nok_mod = rlmer(BIC ~ params + (params | SubjID), data = lmer_dat1) # crashes with "Tbk not of full rank (iter=12!!" and "Error: object 'lasta' not found"
-hyb_nok_mod = lmer(BIC_zis ~ params + (params | SubjID), data = lmer_dat1)
+hyb_nok_mod = lmer(BIC_zis ~ params + (params | SubjID), data = lmer_dat1, REML = F)
 summary(hyb_nok_mod)
+# rob_hyb_nok_mod = rlmer(BIC ~ params + (params | SubjID), data = lmer_dat1, REML = F)
+# summary(rob_hyb_nok_mod)
 ```
 
 The best model fit was achieved when the first and second stages of the 2-step task had common rather than different learning rates $\alpha$ and softmax temperatures $\beta$; the model fit was also improved when disregarding the discount parameter $\lambda$. The final model therefore contained the 5 parameters $\alpha$, $\beta$, $p$, $k$, and $w$. All subsequent analyses were run on this winning model.
@@ -1051,38 +1085,38 @@ gg_parameters_over_time
 
 
 # ANOVAs for parameters w & k
-training_on_w = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "w"))
-# SSPA = 0.607; SSsA = 1.002; SSPsA = 0.001
-# g_eta_sqr = SSPA/(SSPA + SSsA + SSPsA)
-# f_sqr = g_eta_sqr / (1 - g_eta_sqr)
-# my_f = sqrt(f_sqr)
-# summary(training_on_w)
 if (data_source != "2016from_scratch") {
-  training_on_k = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "k"))
-# summary(training_on_k)
-}
+  training_on_w = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "w"))
+  # SSPA = 0.607; SSsA = 1.002; SSPsA = 0.001
+  # g_eta_sqr = SSPA/(SSPA + SSsA + SSPsA)
+  # f_sqr = g_eta_sqr / (1 - g_eta_sqr)
+  # my_f = sqrt(f_sqr)
+  # summary(training_on_w)
+  if (data_source != "2016from_scratch") {
+    training_on_k = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "k"))
+  # summary(training_on_k)
+  }
+  
+  # Mixed-effects regression for parameter w & k
+  regression_param_dat = subset(selected_parameter_dat, parameter == "w" & run %in% c("Run 1", "Run 2"))
+  with(regression_param_dat, by(estimate, list(training_s1, run), mean))
+  co_vs_mbmf = c(-2, 1, 1)
+  mb_vs_mf = c(0, 1, -1)
+  contrasts(regression_param_dat$training_s1) = cbind(co_vs_mbmf, mb_vs_mf)
+  w_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = regression_param_dat, method = "ML")
+  w_training_model = update(w_baseline_model, .~. + training_s1)
+  w_run_model  = update(w_training_model, .~. + run)
+  w_training_run_model = update(w_run_model, .~. + training_s1 * run)
+  w_parameter_aov  = anova(w_baseline_model,
+                          w_training_model, w_run_model,
+                          w_training_run_model)
+  w_train_sess_b = summary(w_training_run_model)[["coefficients"]][["fixed"]][[4]]
+  w_train_sess_p = w_parameter_aov[["p-value"]][[4]]
+  w_train_sess_chi = w_parameter_aov[["L.Ratio"]][[4]]
+  w_train_sess_df = w_parameter_aov[["df"]][[4]]
+  w_train_sess_ps = w_parameter_aov[["p-value"]][1:3]
+  w_train_sess_chis = w_parameter_aov[["L.Ratio"]][1:3]            # only take the two main effects, not the interaction
 
-# Mixed-effects regression for parameter w & k
-regression_param_dat = subset(selected_parameter_dat, parameter == "w" & run %in% c("Run 1", "Run 2"))
-with(regression_param_dat, by(estimate, list(training_s1, run), mean))
-co_vs_mbmf = c(-2, 1, 1)
-mb_vs_mf = c(0, 1, -1)
-contrasts(regression_param_dat$training_s1) = cbind(co_vs_mbmf, mb_vs_mf)
-w_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = regression_param_dat, method = "ML")
-w_training_model = update(w_baseline_model, .~. + training_s1)
-w_run_model  = update(w_training_model, .~. + run)
-w_training_run_model = update(w_run_model, .~. + training_s1 * run)
-w_parameter_aov  = anova(w_baseline_model,
-                        w_training_model, w_run_model,
-                        w_training_run_model)
-w_train_sess_b = summary(w_training_run_model)[["coefficients"]][["fixed"]][[4]]
-w_train_sess_p = w_parameter_aov[["p-value"]][[4]]
-w_train_sess_chi = w_parameter_aov[["L.Ratio"]][[4]]
-w_train_sess_df = w_parameter_aov[["df"]][[4]]
-w_train_sess_ps = w_parameter_aov[["p-value"]][1:3]
-w_train_sess_chis = w_parameter_aov[["L.Ratio"]][1:3]            # only take the two main effects, not the interaction
-
-if (data_source != "2016from_scratch") {
   k_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = subset(selected_parameter_dat, parameter == "k"), method = "ML")
   k_training_model = update(k_baseline_model, .~. + training)
   k_run_model = update(k_training_model, .~. + run)
