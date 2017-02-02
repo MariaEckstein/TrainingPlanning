@@ -47,6 +47,7 @@ preprocess_data = F
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "Figures")
 data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
+model_dir = file.path(home_dir, "TwoStepTask/model")
 limits.stage1_choice_variation = 0.15   # Limit to exclude the whole 2-step task from one subject: Minimal necessary percentage of chosing the less-chosen 1st-stage stimulus, throughout a session. If a subject choses the less-chosen stimulus in less than 'limits.stage1_choice_variation' percent of trials (and choses the more-chosen stimulus more that '1 - limits.stage1_choice_variation'), than this subject will be excluded from further analyses. Set 'limits.stage1_choice_variation' to 0 if no subjects should be excluded.
 limits.key_perseverance_trials = 7      # Limit to exclude individual trials: In how many trials in a row may a subject press the same button without theses trials being excluded?
 limits.key_perseverance_subjects = 0.7   # Limit to exclude the whole 2-step task from one subject: What fraction of trials can a subject have excluded at most due to key perseverange (see above) without being exluded? That is, if subject data still contains (1 - limits.key_perseverance_subjects) percent of trials after key perseverance cleaning, they will remain in the data set; if they have less than limits.key_perseverance_subjects data points after cleaning, they will be removed completely.
@@ -60,7 +61,7 @@ limits.subject_fast_trials = 0.7         # Limit to exclude the whole 2-step tas
 #####################
 
 source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
-library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); library("reshape"); library("R.matlab"); library("simpleboot"); library("car"); library("mlogit"); library("zoo")
+library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); library("reshape"); library("R.matlab"); library("simpleboot"); library("car"); library("mlogit"); library("zoo"); library("lme4"); library("lmerTest"); library("robustlmm")
 library("ggplot2"); theme_set(theme_bw())
 ```
 
@@ -111,9 +112,9 @@ if (data_source == "2016from_scratch" & preprocess_data) {
     # Add subj_file to all_files
     all_files = rbind(all_files, subj_file)
   }
-  write.csv(all_files, file.path(data_dir, "all_files.csv"), row.names = F)
+  write.csv(all_files, file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")), row.names = F)
 }
-all_files = read.csv(file.path(data_dir, "all_files.csv"))
+all_files = read.csv(file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")))
 
 # Get column classes right (cannot rename reward ("Reward", "NoReward") and transition because otherwise later things crash)
 all_files$session = factor(all_files$session, levels = c(1, 2), labels = c("Session 1", "Session 2"))
@@ -469,18 +470,6 @@ gg_overall_stats
 
 ### Logistic regression (switch_stay ~ stay + reward + transition + interaction + correct)
 
-```{r, echo = F, warning = F, message = F, fig.cap = "Simulated log odds"}
-log_odds_sim_dat = expand.grid(effect = c(rep("Stay", 10), rep("Reward", 10), rep("Transition", 10), rep("Interaction", 10)), Strategy = c("Model-based", "Model-free"), log_odds = NA)
-log_odds_sim_dat$log_odds[log_odds_sim_dat$Strategy == "Model-based"] = c(seq(.4, .85, .05), seq(  0, .45, .05), seq(-.2, .25, .05), seq( .4, .85, .05))
-log_odds_sim_dat$log_odds[log_odds_sim_dat$Strategy == "Model-free"]  = c(seq(.4, .85, .05), seq( .6,1.05, .05), seq(-.2, .25, .05), seq(-.2, .25, .05))
-
-gg_logodds_pic = ggplot(log_odds_sim_dat, aes(effect, log_odds)) +
-  stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", color = "blue") +
-  geom_point() +
-  coord_cartesian(ylim = c(-1, 2)) +
-  facet_grid(~ Strategy)
-```
-
 ```{r, echo = F, warning = F, message = F, fig.cap = "Log odds"}
 
 # exclude subjects only based on performance!
@@ -489,13 +478,23 @@ gg_logodds_pic = ggplot(log_odds_sim_dat, aes(effect, log_odds)) +
 source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
 
 ### Logistic regression stay_either ~ reward_prev_trial + transi_prev_trial + interaction
-both_logist_regr_data         = create_logist_regr_data(dat = ts, number.discarded.trials = 20)
-logist_regr_data              = both_logist_regr_data[[1]]
-logist_regr_data_with_correct = both_logist_regr_data[[2]]
-logist_regr_data_with_rep     = both_logist_regr_data[[3]]
-logist_regr_data              = add_group_columns(logist_regr_data)
-logist_regr_data_with_correct = add_group_columns(logist_regr_data_with_correct)
-logist_regr_data_with_rep     = add_group_columns(logist_regr_data_with_rep)
+
+if (preprocess_data) {
+  both_logist_regr_data         = create_logist_regr_data(dat = ts, number.discarded.trials = 20)
+  logist_regr_data              = both_logist_regr_data[[1]]
+  logist_regr_data_with_correct = both_logist_regr_data[[2]]
+  logist_regr_data_with_rep     = both_logist_regr_data[[3]]
+  logist_regr_data              = add_group_columns(logist_regr_data)
+  logist_regr_data_with_correct = add_group_columns(logist_regr_data_with_correct)
+  logist_regr_data_with_rep     = add_group_columns(logist_regr_data_with_rep)
+  write.csv(logist_regr_data, file.path(data_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(logist_regr_data_with_correct, file.path(data_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(logist_regr_data_with_rep, file.path(data_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")), row.names = F)
+} else {
+  logist_regr_data              = read.csv(file.path(data_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")))
+  logist_regr_data_with_correct = read.csv(file.path(data_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")))
+  logist_regr_data_with_rep     = read.csv(file.path(data_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")))
+}
 
 ## Plot the odds ratios for the main effects of transition and reward (in previous trial) and their interaction
 gg_logreg_rti = ggplot(logist_regr_data, aes(effect, odds, fill = effect)) +
@@ -660,13 +659,26 @@ for (runi in unique(logist_regr_data_AICs$run)) {
 ### "Classic" plot (stay ~ reward * transition)
 
 ## Create data
-class_and_new_lagged_effects = create_lagged_regr_data(dat = ts)
-class_lagged_effects         = add_group_columns(class_and_new_lagged_effects[[1]])
-class_smooth_lagged_effects  = create_smooth_lagged_effects(dat = class_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
-lagged_switch_stay           = add_group_columns(class_and_new_lagged_effects[[3]])
-lagged_switch_stay_smooth    = create_smooth_lagged_effects(dat = lagged_switch_stay, name = "lagged_switch_stay", number_of_iterations = 1)
-colnames(lagged_switch_stay_smooth)[colnames(lagged_switch_stay_smooth) %in% c("log_odds", "sd_log_odds", "smooth_log_odds")] = c("stay_percent", "sd_stay_percent", "smooth_stay_percent")
-lagged_switch_stay_stage2    = add_group_columns(class_and_new_lagged_effects[[4]])
+if (preprocess_data) {
+  class_and_new_lagged_effects = create_lagged_regr_data(dat = ts)
+  class_lagged_effects         = add_group_columns(class_and_new_lagged_effects[[1]])
+  class_smooth_lagged_effects  = create_smooth_lagged_effects(dat = class_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
+  lagged_switch_stay           = add_group_columns(class_and_new_lagged_effects[[3]])
+  lagged_switch_stay_smooth    = create_smooth_lagged_effects(dat = lagged_switch_stay, name = "lagged_switch_stay", number_of_iterations = 1)
+  colnames(lagged_switch_stay_smooth)[colnames(lagged_switch_stay_smooth) %in% c("log_odds", "sd_log_odds", "smooth_log_odds")] = c("stay_percent", "sd_stay_percent", "smooth_stay_percent")
+  lagged_switch_stay_stage2    = add_group_columns(class_and_new_lagged_effects[[4]])
+  write.csv(class_lagged_effects, file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv")), row.names = F)
+  write.csv(class_smooth_lagged_effects, file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv")), row.names = F)
+  write.csv(lagged_switch_stay, file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv")), row.names = F)
+  write.csv(lagged_switch_stay_smooth, file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv")), row.names = F)
+  write.csv(lagged_switch_stay_stage2, file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv")), row.names = F)
+} else {
+  class_lagged_effects         = read.csv(file.path(data_dir, paste("class_lagged_effects_", data_source, ".csv")))
+  class_smooth_lagged_effects  = read.csv(file.path(data_dir, paste("class_smooth_lagged_effects_", data_source, ".csv")))
+  lagged_switch_stay           = file.path(data_dir, paste("lagged_switch_stay_", data_source, ".csv"))
+  lagged_switch_stay_smooth    = file.path(data_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv"))
+  lagged_switch_stay_stage2    = read.csv(file.path(data_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv")))
+}
 
 ## Plots
 x = 0; y = 0.4
@@ -889,107 +901,41 @@ We used a genetic algorithm (Matlab's `ga` function) in combination with a minim
 ## GET PARAMETER DATA ##
 ########################
 
-# ts_params_all     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabblpkw.csv"), params = "ALL", num_par = 8)
-# ts_params_all     = subset(ts_params_all, run == "Run 2")
-# ts_params_1alpha  = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abblpkw.csv"), params = "1a", num_par = 7)
-# ts_params_1alpha  = subset(ts_params_1alpha, run == "Run 2")
-# ts_params_1beta   = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aablpkw.csv"), params = "1b", num_par = 7)
-# ts_params_1beta   = subset(ts_params_1beta, run == "Run 2")
-# ts_params_nolambda= cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabbpkw.csv"), params = "no l", num_par = 7)
-# ts_params_nolambda= subset(ts_params_nolambda, run == "Run 2")
-# ts_params_nop     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabblkw.csv"), params = "no p", num_par = 7)
-# ts_params_nop     = subset(ts_params_nop, run == "Run 2")
-# ts_params_nok     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabblpw.csv"), params = "no k", num_par = 7)
-# ts_params_nok     = subset(ts_params_nok, run == "Run 2")
-# ts_params_now     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_aabblpk.csv"), params = "no w", num_par = 7)
-# ts_params_now     = subset(ts_params_now, run == "Run 2")
-# 
-# ts_params_1a_1b     = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_ablpkw.csv"), params = "1a,1b", num_par = 6)
-# ts_params_1a_1b     = subset(ts_params_1a_1b, run == "Run 2")
-# ts_params_1a_1b_nol = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abpkw.csv"), params = "a,b,p,k,w", num_par = 5)
-# ts_params_1a_1b_nol = subset(ts_params_1a_1b_nol, run == "Run 2")
-# ts_params_1a_1b_nop = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_ablkw.csv"), params = "a,b,l,k,w", num_par = 5)
-# ts_params_1a_1b_nop = subset(ts_params_1a_1b_nop, run == "Run 2")
-# ts_params_1a_1b_nok = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_ablpw.csv"), params = "a,b,l,p,w", num_par = 5)
-# ts_params_1a_1b_nok = subset(ts_params_1a_1b_nok, run == "Run 2")
-# ts_params_1a_1b_now = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_ablpk.csv"), params = "a,b,l,p,k", num_par = 5)
-# ts_params_1a_1b_now = subset(ts_params_1a_1b_now, run == "Run 2")
-# 
-# ts_params_1a_1b_nol_nop = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abkw.csv"), params = "a,b,k,w", num_par = 4)
-# ts_params_1a_1b_nol_nop = subset(ts_params_1a_1b_nol_nop, run == "Run 2")
-# ts_params_1a_1b_nol_nok = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abpw.csv"), params = "a,b,p,w", num_par = 4)
-# ts_params_1a_1b_nol_nok = subset(ts_params_1a_1b_nol_nok, run == "Run 2")
-# ts_params_1a_1b_nol_now = cbind(read_in_2step_parameters3("k_and_p_can_be_negative/parameter_data_ga_fmincon_abpk.csv"), params = "a,b,p,k", num_par = 4)
-# ts_params_1a_1b_nol_now = subset(ts_params_1a_1b_nol_now, run == "Run 2")
-
-### Combine all data frames
-# ts_params = rbind(ts_params_all,
-#                   ts_params_nop, ts_params_nok, ts_params_now, ts_params_1alpha, ts_params_1beta, ts_params_nolambda,
-#                   ts_params_1a_1b,
-#                   ts_params_1a_1b_nop, ts_params_1a_1b_nok, ts_params_1a_1b_now, ts_params_1a_1b_nol,
-#                   ts_params_1a_1b_nol_nop, ts_params_1a_1b_nol_nok, ts_params_1a_1b_nol_now)
-
 ### Read in data frames for all combinations of parameters
-ts_colnames = c("a1", "a2", "b1", "b2", "l", "p", "k", "w", "BIC", "SubjID", "session", "run", "f")
-ts_params_aabblpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aabblpkw.csv", col.names = ts_colnames, header = F),
-                          params = "all", num_par = 8)
-ts_params_aabbpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aabbpkw.csv", col.names = ts_colnames, header = F),
-                          params = "nol", num_par = 7)
-ts_params_aablpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aablpkw.csv", col.names = ts_colnames, header = F),
-                          params = "1b", num_par = 7)
-ts_params_aabblpw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aabblpw.csv", col.names = ts_colnames, header = F),
-                          params = "nok", num_par = 7)
-ts_params_aabblpk = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aabblpk.csv", col.names = ts_colnames, header = F),
-                          params = "now", num_par = 7)
-ts_params_aabblkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_aabblkw.csv", col.names = ts_colnames, header = F),
-                          params = "nop", num_par = 7)
-ts_params_abblpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abblpkw.csv", col.names = ts_colnames, header = F),
-                          params = "1a", num_par = 7)
-ts_params_abblpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abblpkw.csv", col.names = ts_colnames, header = F),
-                          params = "1a", num_par = 7)
-ts_params_ablpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_ablpkw.csv", col.names = ts_colnames, header = F),
-                          params = "1a1b", num_par = 6)
-ts_params_ablkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_ablkw.csv", col.names = ts_colnames, header = F),
-                          params = "ablkw", num_par = 5)
-ts_params_ablpw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_ablpw.csv", col.names = ts_colnames, header = F),
-                          params = "ablpw", num_par = 5)
-ts_params_abpkw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abpkw.csv", col.names = ts_colnames, header = F),
-                          params = "abpkw", num_par = 5)
-ts_params_ablpk = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_ablpk.csv", col.names = ts_colnames, header = F),
-                          params = "ablpk", num_par = 5)
-ts_params_abpw = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abpw.csv", col.names = ts_colnames, header = F),
-                          params = "abpw", num_par = 4)
-ts_params_abpk = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abpk.csv", col.names = ts_colnames, header = F),
-                          params = "abpk", num_par = 4)
-ts_params_abp = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abp.csv", col.names = ts_colnames, header = F),
-                          params = "abp", num_par = 3)
-ts_params_abk = cbind(read.csv("BerkeleyData/TwoStep/ga_fmincon_abk.csv", col.names = ts_colnames, header = F),
-                          params = "abk", num_par = 3)
+# ts_colnames = c("a1", "a2", "b1", "b2", "l", "p", "k", "w", "BIC", "SubjID", "session", "run", "f")
+ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")
+ts_params = data.frame(t(ts_colnames))[0,]
+colnames(ts_params) = ts_colnames
 
-### Combine all data frames
-ts_params = rbind(ts_params_aabblpkw,
-                  ts_params_aabbpkw, ts_params_aablpkw, ts_params_abblpkw, ts_params_abblpkw, ts_params_aabblpk, ts_params_aabblpw, ts_params_aabblkw,
-                  ts_params_ablpkw,
-                  ts_params_ablpw, ts_params_abpkw, ts_params_ablpk, ts_params_ablkw,
-                  ts_params_abpw, ts_params_abpk,
-                  ts_params_abp, ts_params_abk)
-# ts_params_$function.value = NULL
+file_names = list.files(model_dir, pattern = "genrec_real_agents.*.mat")
+for (file_name in file_names) {
+  # Read in parameter estimates of one model
+  par_file = as.data.frame(readMat(file.path(model_dir, file_name)))[,c(1, 19, 10:17, 20:22)]
+  colnames(par_file) = ts_colnames
+  # Add model name (params) and number of parameters (num_par)
+  params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim_")[[1]][1]
+  num_par = sum(par_file[1,2:9] != 0)
+  session = paste("Session", ifelse(par_file$run %in% c(1, 2), 1, 2))
+  par_file = cbind(par_file, params, num_par, session)
+  # Add current file to the big file
+  ts_params = rbind(ts_params, par_file)
+}
+ts_params = subset(ts_params, run %in% 1:4)
+ts_params$run = paste("Run", ts_params$run)
 
-### Exclude bad subjects (more than 50% key repetition)
+### Exclude bad subjects
 ts_params$excluded = FALSE
 for (rowi in 1:nrow(excluded_subj)) {
   ex_row = excluded_subj[rowi,]
   ts_params$excluded[ts_params$SubjID == as.numeric(as.character(ex_row$SubjID)) & ts_params$session == ex_row$session & as.character(ts_params$run) == as.character(ex_row$run)] = TRUE
 }
+### Exclude outlier BICs
+ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)))
 ts_params = subset(ts_params, excluded == FALSE)
 ts_params$excluded = NULL
 
-### Normalize parameter values
+### Normalize parameters (accidentally deleted - necssary for old data)
 ts_params = add_group_columns(ts_params)
-ts_params$b1 = ts_params$b1 / 20
-ts_params$b2 = ts_params$b2 / 20
-ts_params$p     = ts_params$p / 10
-ts_params$k     = ts_params$k / 10
 ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC"))
 colnames(ts_params_molten) = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "parameter", "estimate")
 ts_params_molten$parameter = as.factor(ts_params_molten$parameter)
@@ -998,31 +944,6 @@ ts_params_molten$params    = as.factor(ts_params_molten$params)
 ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
 # mean_params = ddply(ts_params_molten, .(parameter, params), summarize, mean_estimate = mean(estimate, na.rm = T))
 ```
-
-#### The models.
-
-The models contained the parameters $\alpha 1$, $\alpha 2$, $\beta 1$, $\beta 2$, $\lambda$, $p$, $k$, and $w$ (table 1).
-
-**Parameter**   | **Boundaries**  | **Significance**
-----------------|-----------------|----------------
-$\alpha 1$      | [0, 1]          | $1^\text{st}$-stage learning rate
-$\alpha 2$      | [0, 1]          | $2^\text{nd}$-stage learning rate
-$\beta 1$       | [0, 20]         | $1^\text{st}$-stage softmax temperature
-$\beta 2$       | [0, 20]         | $2^\text{nd}$-stage softmax temperature
-$\lambda$       | [0, 1]          | Discount of $1^\text{st}$-stage reward-based value update
-$p$             | [-5, 5]         | Choice perseverance
-$k$             | [-5, 5]         | Key perseverance
-$w$             | [0.01, 0.99]    | Relative weight of model-based vs. model-free decision making
-
-Parameters in all models were estimated using the same parameter boundaries (see *table 1* above). Models differed in the number of parameters estimated (leaving out $\alpha 2$, $\beta 2$, $\lambda$, $p$, $k$, or a combination of these).
-
-The following parameter values were used when a parameter was not estimated:
-- $\alpha 2$: Equals $\alpha 1$
-- $\beta 2$: Equals $\beta 1$
-- $\lambda$: 1
-- $p$: 0
-- $k$: 0
-- $w$: 0.5
 
 #### Which model is the best?
 
@@ -1035,6 +956,23 @@ BIC = ggplot(subset(ts_params_molten), aes(params, BIC, group = 1, color = facto
   # facet_grid(~ run) +
   labs(x = "", color = "# of params")
 BIC
+
+lmer_dat1 = subset(ts_params, params %in% c("hyb", "nok"))
+lmer_dat1$SubjID = factor(lmer_dat1$SubjID)
+lmer_dat1$params = factor(lmer_dat1$params)
+contrasts(lmer_dat1$params) = c(-1, 1)
+lmer_dat1$BIC_z = (lmer_dat1$BIC - mean(lmer_dat1$BIC, na.rm = T)) / sd(lmer_dat1$BIC, na.rm = T)
+lmer_dat1$BIC_zi = max(lmer_dat1$BIC_z) - lmer_dat1$BIC_z + 0.00001
+lmer_dat1$BIC_zis = sqrt(lmer_dat1$BIC_zi)
+with(lmer_dat1, tapply(BIC, params, mean))
+ggplot(ts_params, aes(params, BIC)) + stat_summary(fun.y = mean, geom = "bar") + geom_point()
+ggplot(lmer_dat1, aes(params, BIC)) + geom_boxplot() # problem: not normally distributed
+hist(lmer_dat1$BIC_z); shapiro.test(lmer_dat1$BIC_z) # not normal
+hist(lmer_dat1$BIC_zis); shapiro.test(lmer_dat1$BIC_zis) # not normal and no transformation helps
+with(lmer_dat1, tapply(BIC, params, var)); bartlett.test(lmer_dat1$BIC, lmer_dat1$params) # variances are equal -> good
+# hyb_nok_mod = rlmer(BIC ~ params + (params | SubjID), data = lmer_dat1) # crashes with "Tbk not of full rank (iter=12!!" and "Error: object 'lasta' not found"
+hyb_nok_mod = lmer(BIC_zis ~ params + (params | SubjID), data = lmer_dat1)
+summary(hyb_nok_mod)
 ```
 
 The best model fit was achieved when the first and second stages of the 2-step task had common rather than different learning rates $\alpha$ and softmax temperatures $\beta$; the model fit was also improved when disregarding the discount parameter $\lambda$. The final model therefore contained the 5 parameters $\alpha$, $\beta$, $p$, $k$, and $w$. All subsequent analyses were run on this winning model.
@@ -1045,28 +983,14 @@ We expected that intensive strategy training would deplete specific cognitive re
 
 Our study comprised two sessions, 2 weeks apart, in which subjects received either model-based or model-free trainings. We hypothesized that, right after model-based training, subjects would fail to employ model-based strategies in a transfer task, and that right after model-free training, they would fail to employ model-free strategies (**cognitive-depletion hypothesis**). Despite short-term cognitive depletion, we also expected that model-based training would lead to long-term increases in model-based strategies and model-free training would lead to long-term increases in model-free strategies (**cognitive-enhancement hypothesis**).
 
-```{r, echo = F, fig.cap = "Simulated Parameter Data"}
-par_sim = expand.grid(Parameter = c("alpha", "beta", "p", "k", "w"), Strategy = c("Model-based", "Model-free"))
-par_sim$value = c(.3, .2, .08, .02, .8, .3, .2, .08, .02, .3)
-
-gg_par_sim = ggplot(par_sim, aes(Parameter, value, fill = Strategy)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_point(position = position_dodge(width = .9)) +
-  coord_cartesian(ylim = c(0, 1)) +
-  scale_fill_manual(values = c("darkgreen", "sienna4")) +
-  scale_y_continuous(breaks = 0, labels = 0) +
-  theme(legend.position = "none")#c(.2, .7), legend.background = element_rect(fill = "transparent"))
-
-```
-
 ```{r, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6, fig.cap = "Parameter estimates for the Model-based training (red; model-based training) and the Model-free training (blue; model-free training). The Model-based training was expected to show fewer model-based strategies in the transfer task than the Model-free training due to cognitive depletion; there was a minor, non-significant difference."}
 
 # Add training column
-selected_parameter_dat = subset(ts_params_molten, params == "abpkw" & parameter %in% c("a1", "b1", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
-
-# selected_parameter_dat$train_order = NA
-# selected_parameter_dat$train_order[selected_parameter_dat$SubjID %in% seq(1,101,4) | selected_parameter_dat$SubjID %in% seq(3,103,4)] = "ArrTol"
-# selected_parameter_dat$train_order[selected_parameter_dat$SubjID %in% seq(2,102,4) | selected_parameter_dat$SubjID %in% seq(4,104,4)] = "TolArr"
+if (data_source == "2016from_scratch") {
+  selected_parameter_dat = subset(ts_params_molten, params == "nok" & parameter %in% c("a1", "a2", "b1", "b2", "p", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
+} else {
+  selected_parameter_dat = subset(ts_params_molten, params == "abpkw" & parameter %in% c("a1", "b1", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
+}
 
 ### Plot depletion vs. no depletion (session 1, both runs)
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
@@ -1133,15 +1057,17 @@ training_on_w = aov(estimate ~ training + (training * run) + Error(SubjID/run), 
 # f_sqr = g_eta_sqr / (1 - g_eta_sqr)
 # my_f = sqrt(f_sqr)
 # summary(training_on_w)
-training_on_k = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "k"))
+if (data_source != "2016from_scratch") {
+  training_on_k = aov(estimate ~ training + (training * run) + Error(SubjID/run), data = subset(selected_parameter_dat, parameter == "k"))
 # summary(training_on_k)
+}
 
 # Mixed-effects regression for parameter w & k
-regression_param_dat = subset(selected_parameter_dat, parameter == "w" & run %in% c(1,2))
+regression_param_dat = subset(selected_parameter_dat, parameter == "w" & run %in% c("Run 1", "Run 2"))
 with(regression_param_dat, by(estimate, list(training_s1, run), mean))
 co_vs_mbmf = c(-2, 1, 1)
 mb_vs_mf = c(0, 1, -1)
-contrasts(regression_param_dat$training_s1) = cbind(co_vs_mbmf, mf_vs_mb)
+contrasts(regression_param_dat$training_s1) = cbind(co_vs_mbmf, mb_vs_mf)
 w_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = regression_param_dat, method = "ML")
 w_training_model = update(w_baseline_model, .~. + training_s1)
 w_run_model  = update(w_training_model, .~. + run)
@@ -1156,17 +1082,19 @@ w_train_sess_df = w_parameter_aov[["df"]][[4]]
 w_train_sess_ps = w_parameter_aov[["p-value"]][1:3]
 w_train_sess_chis = w_parameter_aov[["L.Ratio"]][1:3]            # only take the two main effects, not the interaction
 
-k_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = subset(selected_parameter_dat, parameter == "k"), method = "ML")
-k_training_model = update(k_baseline_model, .~. + training)
-k_run_model = update(k_training_model, .~. + run)
-k_training_run_model = update(k_run_model, .~. + training * run)
-k_parameter_aov = anova(k_baseline_model,
-                        k_training_model, k_run_model,
-                        k_training_run_model)
-k_train_sess_b = summary(k_training_run_model)[["coefficients"]][["fixed"]][[4]]
-k_train_sess_p = k_parameter_aov[["p-value"]][[4]]
-k_train_sess_chi = k_parameter_aov[["L.Ratio"]][[4]]
-k_train_sess_df = k_parameter_aov[["df"]][[4]]
+if (data_source != "2016from_scratch") {
+  k_baseline_model = lme(estimate ~ 1, random = ~1|SubjID, data = subset(selected_parameter_dat, parameter == "k"), method = "ML")
+  k_training_model = update(k_baseline_model, .~. + training)
+  k_run_model = update(k_training_model, .~. + run)
+  k_training_run_model = update(k_run_model, .~. + training * run)
+  k_parameter_aov = anova(k_baseline_model,
+                          k_training_model, k_run_model,
+                          k_training_run_model)
+  k_train_sess_b = summary(k_training_run_model)[["coefficients"]][["fixed"]][[4]]
+  k_train_sess_p = k_parameter_aov[["p-value"]][[4]]
+  k_train_sess_chi = k_parameter_aov[["L.Ratio"]][[4]]
+  k_train_sess_df = k_parameter_aov[["df"]][[4]]
+}
 
 # Power analysis
 # library("pwr")
@@ -1194,16 +1122,16 @@ k_train_sess_df = k_parameter_aov[["df"]][[4]]
 ```
 
 ```{r, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
-
+if (data_source != "2016from_scratch") {
 diff_dat = data.frame(SubjID = NA, runs = NA, parameter = NA, estimate = NA)[0,]
 row = 1
 for (parami in unique(selected_parameter_dat$parameter)) {
   for (subj in unique(selected_parameter_dat$SubjID)) {
       
-    estim1 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == 1)$estimate
-    estim2 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == 2)$estimate
-    estim3 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == 3)$estimate
-    estim4 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == 4)$estimate
+    estim1 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 1")$estimate
+    estim2 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 2")$estimate
+    estim3 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 3")$estimate
+    estim4 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 4")$estimate
     
     d12 = estim2 - estim1
     d23 = estim3 - estim2
@@ -1238,6 +1166,7 @@ gg_param_changes = ggplot(diff_dat, aes(parameter, estimate, color = parameter !
   labs(x = "", y = "Change in parameters between runs") +
   facet_grid(training ~ runs)
 gg_param_changes
+}
 ```
 
 
