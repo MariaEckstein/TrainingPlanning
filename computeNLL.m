@@ -1,8 +1,7 @@
-function result = computeNLL(Agent, par, n_fit, output, common, data_type, a1b1)
+function result = computeNLL(Agent, par, n_fit, output, common, data_type)
 
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
-n_params = length(par);
 alpha1 = par(1);
 alpha2 = par(2);
 beta1 = par(3) * 100;
@@ -11,10 +10,6 @@ lambda = par(5);
 w = par(6);
 p_par = par(7) * 200 - 100;
 k_par = par(8) * 200 - 100;
-if length(a1b1) >= 4
-    if strcmp(a1b1(1:4), '1a1b')
-    end
-end
 
 %%% Initial fractal values
 epsilon = .00001;

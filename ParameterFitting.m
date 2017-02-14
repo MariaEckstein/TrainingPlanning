@@ -28,12 +28,12 @@ classdef ParameterFitting
         end
         
         function [fit_params, function_value] = minimize_NLL(self, Agent, sim_data, common)
-            object_fun = @(par)computeNLL(Agent, par, self.n_fit, 'NLL', common, sim_data, self.fit_model);
+            object_fun = @(par)computeNLL(Agent, par, self.n_fit, 'NLL', common, sim_data);
             [fit_params, function_value] = find_params_that_minimize_NLL(object_fun, self.par0, self.pmin, self.pmax, self.n_fmincon_iterations, self.solver_algo);
         end
         
         function NLLBICAIC = compute_NLL(self, Agent, fit_params, sim_data, common)
-            NLLBICAIC = computeNLL(Agent, fit_params, self.n_fit, 'all', common, sim_data, self.fit_model);
+            NLLBICAIC = computeNLL(Agent, fit_params, self.n_fit, 'all', common, sim_data);
         end
         
     end

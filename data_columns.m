@@ -1,5 +1,4 @@
 %% Data columns
-n_params = 8;
 AgentID_c = 1;
 frac1_c = 2;
 frac2_c = 3;
@@ -12,4 +11,5 @@ Qmb1_c = 13:14;
 Qmb2_c = 15:18;
 Q1_c = 19:20;
 Q2_c = 21:24;
+n_params = 8;
 par_c = 25:(25 + n_params - 1);
