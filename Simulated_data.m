@@ -11,14 +11,14 @@ classdef Simulated_data < Dataset
     
     methods
         
-        function obj = Simulated_data(sim_model, n_datasets, n_trials, common)
+        function obj = Simulated_data(sim_model, n_trials, common)
             obj.sim_model = sim_model;
             if nargin == 1
                 load(['data_' sim_model '_agents.mat'])
                 obj.number = length(unique(Data(1:end-1,1)));
                 obj.Data = Data;
             else
-                obj.number = n_datasets;
+                obj.number = 100;
                 model_parameters = define_model_parameters();
                 obj.sim_par = model_parameters(model_ID(sim_model),:);
                 obj.Data = simulate_task(obj.number, n_trials, obj.sim_par, common);

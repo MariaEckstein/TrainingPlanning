@@ -15,7 +15,7 @@ classdef DatasetTest < matlab.unittest.TestCase
             common = 0.7;
             
             % Simulate data
-            dataset = Simulated_data(sim_model, n_datasets, n_trials, common);
+            dataset = Simulated_data(sim_model, n_trials, common);
             [Agent, agentID, runID] = dataset.get_data(1);
 
             testCase.verifyEqual(agentID, 1);
@@ -38,7 +38,7 @@ classdef DatasetTest < matlab.unittest.TestCase
                 
         function testRealData2015(testCase)
             data_year = 2015;
-            [~, ~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
+            [~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
             dataset = Real_data(file_dir, data_year);
             [Agent, agentID, runID] = dataset.get_data(1);
             [Agent, agentID, runID] = dataset.get_data(dataset.number);
@@ -51,7 +51,7 @@ classdef DatasetTest < matlab.unittest.TestCase
         
         function testRealData2016(testCase)
             data_year = 2016;
-            [~, ~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
+            [~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
             dataset = Real_data(file_dir, data_year);
             [Agent, agentID, runID] = dataset.get_data(1);
             [Agent, agentID, runID] = dataset.get_data(dataset.number);
@@ -71,7 +71,7 @@ classdef DatasetTest < matlab.unittest.TestCase
             n_trials = 5;
             n_params = 8;
             i_dataset = 1;
-            dataset = Simulated_data(sim_model, n_datasets, n_trials, common);
+            dataset = Simulated_data(sim_model, n_trials, common);
             [Agent, agentID, runID] = dataset.get_data(i_dataset);
             fit_params = -1 * ones(1, n_params);
             NLLBICAIC = 100 * ones(1, 3);
