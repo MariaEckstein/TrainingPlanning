@@ -19,9 +19,11 @@ output:
 * to find the best model: for run 1, 
 * use spm_... function from spm 
 * calculate differences between BIC -> use sign test (test median against zero; like binomial test; Matlab function: signtest)
+* fit all models to the different training conditions
+
+* baseline parameters to run 1
 * don't transform
 * check that i'M plotting the right model
-* baseline parameters to run 1
 
 ## General
 
@@ -950,7 +952,7 @@ for (file_name in file_names) {
   par_file = as.data.frame(readMat(file.path(model_dir, file_name)))[,c(1, 19, 10:17, 20:22)]
   colnames(par_file) = ts_colnames
   # Add model name (params) and number of parameters (num_par)
-  params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim_")[[1]][1]
+  params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim.mat")[[1]][1]
   num_par = sum(par_file[1,2:9] != 0)
   session = paste("Session", ifelse(par_file$run %in% c(1, 2), 1, 2))
   par_file = cbind(par_file, params, num_par, session)
@@ -974,6 +976,8 @@ ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)
 ts_params = subset(ts_params, excluded == FALSE)
 ts_params$excluded = NULL
 
+summary(ts_params)
+
 ### Normalize parameters (accidentally deleted - necssary for old data)
 ts_params = add_group_columns(ts_params)
 ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC"))
@@ -990,30 +994,75 @@ ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
 The Baysian Information Criterion (BIC) evaluates model fit. The lower the BIC, the better a model fits the data, taking into account the number of parameters.
 
 ```{r, echo = F, warning = F, message = F, fig.height = 4.5, fig.width = 9, fig.cap = "Model fits (BIC) for different combinations of parameters. Lower BICs indicate *better* model fit. The model that fits the participant data best overall contained the parameters $alpha$, $beta$, $p$, $k$, and $w$. (Lighter colors indicate smaller and darker colors indicate larger numbers of parameters.)"}
-BIC = ggplot(subset(ts_params_molten), aes(params, BIC, group = 1, color = factor(num_par))) +
-  # geom_point() +
-  stat_summary(fun.y = "mean", geom = "point") +
+# Plot average BICs
+BIC = ggplot(subset(ts_params_molten, parameter == "a1"), aes(params, BIC, group = 1, color = factor(num_par))) +
+  # geom_point(position = "jitter", alpha = 0.2) +
   stat_summary(fun.data = "mean_cl_normal", geom = "pointrange") +
   theme(legend.position = c(0.07, 0.25), legend.background = element_rect(fill = "transparent")) +
   # facet_grid(~ run) +
   labs(x = "", color = "# of params")
 BIC
 
+# Prepare relative BICs
+rel_BIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter)),
+                  idvar = c("SubjID", "session", "run", "training", "training_s1"), timevar = "params", direction = "wide")
+rel_BIC$nop = with(rel_BIC, BIC.hyb - BIC.nop)
+rel_BIC$nok = with(rel_BIC, BIC.hyb - BIC.nok)
+rel_BIC$mb = with(rel_BIC, BIC.hyb - BIC.mb)
+rel_BIC$mf = with(rel_BIC, BIC.hyb - BIC.mf)
+rel_BIC$a1b1 = with(rel_BIC, BIC.hyb - BIC.a1b1)
+rel_BIC$l0 = with(rel_BIC, BIC.hyb - BIC.l0)
+rel_BIC$l1 = with(rel_BIC, BIC.hyb - BIC.l1)
+rel_BIC$nok_mb = with(rel_BIC, BIC.hyb - BIC.nok_mb)
+rel_BIC$nok_mf = with(rel_BIC, BIC.hyb - BIC.nok_mf)
+# rel_BIC$nok_l0 = with(rel_BIC, BIC.hyb - BIC.nok_l0)
+rel_BIC$nok_l1 = with(rel_BIC, BIC.hyb - BIC.nok_l1)
+rel_BIC$a1b1_nok = with(rel_BIC, BIC.hyb - BIC.a1b1_nok)
+summary(rel_BIC)
+rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1_nok, BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok_l1, BIC.nok_l1, BIC.nok_mb, BIC.nok_mf, BIC.nok, BIC.nop, BIC.nopk)),
+                      id.vars = c("SubjID", "session", "run", "training", "training_s1"))
+
+# Plot relative BICs
+gg_rel_BIC = ggplot(rel_BIC_molten, aes(variable, -value)) +
+  geom_point(position = "jitter", alpha = 0.2) +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+  labs(x = "", y = "model BIC - hyb BIC")
+gg_rel_BIC
+
+# Stats
+nok_total = sum(!is.na(rel_BIC$nok))
+nok_better = sum(rel_BIC$nok > 0, na.rm = T)
+binom.test(nok_better, nok_total)   # ***
+nop_total = sum(!is.na(rel_BIC$nop))
+nop_better = sum(rel_BIC$nop > 0, na.rm = T)
+binom.test(nop_better, nop_total)   # .
+mb_total = sum(!is.na(rel_BIC$mb))
+mb_better = sum(rel_BIC$mb > 0, na.rm = T)
+binom.test(mb_better, mb_total)   # ***
+mf_total = sum(!is.na(rel_BIC$mf))
+mf_better = sum(rel_BIC$mf > 0, na.rm = T)
+binom.test(mf_better, mf_total)   # ***
+l1_total = sum(!is.na(rel_BIC$l1))
+l1_better = sum(rel_BIC$l1 > 0, na.rm = T)
+binom.test(l1_better, l1_total)   # ***
+nok_mb_total = sum(!is.na(rel_BIC$nok_mb))
+nok_mb_better = sum(rel_BIC$nok_mb > 0, na.rm = T)
+binom.test(nok_mb_better, nok_mb_total)   # ***
+nok_mf_total = sum(!is.na(rel_BIC$nok_mf))
+nok_mf_better = sum(rel_BIC$nok_mf > 0, na.rm = T)
+binom.test(nok_mf_better, nok_mf_total)   # ***
+nok_l1_total = sum(!is.na(rel_BIC$nok_l1))
+nok_l1_better = sum(rel_BIC$nok_l1 > 0, na.rm = T)
+binom.test(nok_l1_better, nok_l1_total)   # ***
+
 lmer_dat1 = subset(ts_params, params %in% c("hyb", "nok"))
 lmer_dat1$SubjID = factor(lmer_dat1$SubjID)
 lmer_dat1$params = factor(lmer_dat1$params)
 contrasts(lmer_dat1$params) = c(-1, 1)
-lmer_dat1$BIC_z = (lmer_dat1$BIC - mean(lmer_dat1$BIC, na.rm = T)) / sd(lmer_dat1$BIC, na.rm = T)
-lmer_dat1$BIC_zi = max(lmer_dat1$BIC_z) - lmer_dat1$BIC_z + 0.00001
-lmer_dat1$BIC_zis = sqrt(lmer_dat1$BIC_zi)
 with(lmer_dat1, tapply(BIC, params, mean))
-ggplot(ts_params, aes(params, BIC)) + stat_summary(fun.y = mean, geom = "bar") + geom_point()
-ggplot(lmer_dat1, aes(params, BIC)) + geom_boxplot() # problem: not normally distributed
-hist(lmer_dat1$BIC_z); shapiro.test(lmer_dat1$BIC_z) # not normal
-hist(lmer_dat1$BIC_zis); shapiro.test(lmer_dat1$BIC_zis) # not normal and no transformation helps
 with(lmer_dat1, tapply(BIC, params, var)); bartlett.test(lmer_dat1$BIC, lmer_dat1$params) # variances are equal -> good
 # hyb_nok_mod = rlmer(BIC ~ params + (params | SubjID), data = lmer_dat1) # crashes with "Tbk not of full rank (iter=12!!" and "Error: object 'lasta' not found"
-hyb_nok_mod = lmer(BIC_zis ~ params + (params | SubjID), data = lmer_dat1, REML = F)
+hyb_nok_mod = lmer(BIC ~ params + (params | SubjID), data = lmer_dat1, REML = F)
 summary(hyb_nok_mod)
 # rob_hyb_nok_mod = rlmer(BIC ~ params + (params | SubjID), data = lmer_dat1, REML = F)
 # summary(rob_hyb_nok_mod)
@@ -1167,49 +1216,64 @@ if (data_source != "2016from_scratch") {
 
 ```{r, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
 if (data_source != "2016from_scratch") {
-diff_dat = data.frame(SubjID = NA, runs = NA, parameter = NA, estimate = NA)[0,]
-row = 1
-for (parami in unique(selected_parameter_dat$parameter)) {
-  for (subj in unique(selected_parameter_dat$SubjID)) {
-      
-    estim1 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 1")$estimate
-    estim2 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 2")$estimate
-    estim3 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 3")$estimate
-    estim4 = subset(selected_parameter_dat, parameter == parami & SubjID == subj & run == "Run 4")$estimate
-    
-    d12 = estim2 - estim1
-    d23 = estim3 - estim2
-    d34 = estim4 - estim3
   
-    if (length(d12) > 0) {diff_dat[row,]   = c(subj, 12, parami, d12)}
-    if (length(d23) > 0) {diff_dat[row+1,] = c(subj, 23, parami, d23)}
-    if (length(d23) > 0) {diff_dat[row+2,] = c(subj, 34, parami, d34)}
-    
-    row = row + 3
+  diff_dat = data.frame(SubjID = NA, runs = NA, parameter = NA, estimate = NA)[0,]
+  rests = dat
+  row = 1
+  for (parami in unique(selected_parameter_dat$parameter)) {
+    for (subj in unique(selected_parameter_dat$SubjID)) {
+      
+      dat = subset(selected_parameter_dat, parameter == parami & SubjID == subj)
+      
+      if (nrow(dat) == 4) {
+        estim1 = subset(dat, run == "Run 1")$estimate
+        estim2 = subset(dat, run == "Run 2")$estimate
+        estim3 = subset(dat, run == "Run 3")$estimate
+        estim4 = subset(dat, run == "Run 4")$estimate
+        
+        d12 = estim2 - estim1
+        d23 = estim3 - estim2
+        d34 = estim4 - estim3
+        d13 = estim3 - estim1
+        d14 = estim4 - estim1
+      
+        if (length(d12) > 0) {diff_dat[row,]   = c(subj, 12, parami, d12)}
+        if (length(d23) > 0) {diff_dat[row+1,] = c(subj, 23, parami, d23)}
+        if (length(d23) > 0) {diff_dat[row+2,] = c(subj, 34, parami, d34)}
+        if (length(d13) > 0) {diff_dat[row+3,] = c(subj, 13, parami, d13)}
+        if (length(d14) > 0) {diff_dat[row+4,] = c(subj, 14, parami, d14)}
+        
+        row = row + 5
+      }
+    }
   }
-}
-
-diff_dat = add_group_columns(subset(diff_dat, !is.na(SubjID)))
-diff_dat$estimate = as.numeric(diff_dat$estimate)
-diff_dat$runs = as.character(diff_dat$runs)
-
-gg_param_changes_s1 = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
-  stat_summary(fun.y = mean, geom = "point") +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-  geom_point(alpha = .4) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Change in parameters between runs") +
-  facet_grid(training_s1 ~ runs)
-gg_param_changes_s1
-
-gg_param_changes = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
-  stat_summary(fun.y = mean, geom = "point") +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-  geom_point(alpha = .4) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Change in parameters between runs") +
-  facet_grid(training ~ runs)
-gg_param_changes
+  
+  
+  diff_dat = add_group_columns(subset(diff_dat, !is.na(SubjID)))
+  diff_dat$estimate = as.numeric(diff_dat$estimate)
+  diff_dat$runs = factor(as.character(diff_dat$runs))
+  diff_dat$SubjID = factor(diff_dat$SubjID)
+  diff_dat$parameter = factor(diff_dat$parameter)
+  
+  summary(diff_dat)
+  
+  gg_param_changes_s1 = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
+    stat_summary(fun.y = mean, geom = "point") +
+    stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+    geom_point(alpha = .4) +
+    theme(legend.position = "none") +
+    labs(x = "", y = "Change in parameters between runs") +
+    facet_grid(training_s1 ~ runs)
+  gg_param_changes_s1
+  
+  gg_param_changes = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
+    stat_summary(fun.y = mean, geom = "point") +
+    stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+    geom_point(alpha = .4) +
+    theme(legend.position = "none") +
+    labs(x = "", y = "Change in parameters between runs") +
+    facet_grid(training ~ runs)
+  gg_param_changes
 }
 ```
 
