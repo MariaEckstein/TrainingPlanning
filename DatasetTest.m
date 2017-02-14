@@ -45,13 +45,9 @@ classdef DatasetTest < matlab.unittest.TestCase
             [Agent, agentID, runID] = dataset.get_data(1);
             [Agent, agentID, runID] = dataset.get_data(2);
 
-            testCase.verifyTrue(agentID > 100);
             testCase.verifyTrue(any(runID == 1:4));
             all_zeros = all(Agent(1,:) == 0);
             testCase.verifyFalse(all_zeros);
-            all_zeros = all(Agent(1,:) == 0);
-            testCase.verifyFalse(all_zeros);
-            testCase.verifyEqual(n_datasets, 266);
         end
         
         function testGenrec(testCase)
