@@ -5,6 +5,7 @@ sim_model = nan;   % What model should be used for simulation / what data should
 fit_model = 'nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
+data_year = 2015;   % Can be '2015' (data collected in Munich) or '2016' (data collected in XLab)
 
 %% Prepare things
 n_workers = 12;   % Number of workers when on cluster
@@ -14,7 +15,7 @@ fit_data = true;   % Sould the data also be fitted? Or just simulated?
 if isnan(fit_model)
     fit_data = false;
 end
-[n_datasets, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location, n_workers);
+[n_datasets, n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location, n_workers, data_year);
 
 %% Simulate / Load Data
 % Create Simulated_data or Real_data object, with info about simulated / real data
@@ -24,7 +25,7 @@ switch sim_data
     case 'load'
         dataset = Simulated_data(sim_model);
     case 'real'
-        dataset = Real_data(file_dir);
+        dataset = Real_data(file_dir, data_year);
 end
 
 %% Fit parameters to the Data (if fit_data is true)

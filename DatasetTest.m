@@ -36,16 +36,28 @@ classdef DatasetTest < matlab.unittest.TestCase
             testCase.verifyFalse(all_zeros);
         end
                 
-        function testRealData(testCase)
-            file_dir = 'C:\Users\maria\MEGAsync\TrainingPlanningProject\TwoStepTask\Results\rawdata2016';   % Where is the original data stored?
-            dataset = Real_data(file_dir);
-            n_datasets = dataset.number;
-            
-            % Load human data
+        function testRealData2015(testCase)
+            data_year = 2015;
+            [~, ~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
+            dataset = Real_data(file_dir, data_year);
             [Agent, agentID, runID] = dataset.get_data(1);
-            [Agent, agentID, runID] = dataset.get_data(2);
+            [Agent, agentID, runID] = dataset.get_data(dataset.number);
+
+            testCase.verifyTrue(any(runID == 2:4));
+            testCase.verifyTrue(any(agentID > 0));
+            all_zeros = all(Agent(1,:) == 0);
+            testCase.verifyFalse(all_zeros);
+        end
+        
+        function testRealData2016(testCase)
+            data_year = 2016;
+            [~, ~, ~, file_dir] = determine_location_specifics('home', 12, data_year);
+            dataset = Real_data(file_dir, data_year);
+            [Agent, agentID, runID] = dataset.get_data(1);
+            [Agent, agentID, runID] = dataset.get_data(dataset.number);
 
             testCase.verifyTrue(any(runID == 1:4));
+            testCase.verifyTrue(any(agentID > 100));
             all_zeros = all(Agent(1,:) == 0);
             testCase.verifyFalse(all_zeros);
         end
