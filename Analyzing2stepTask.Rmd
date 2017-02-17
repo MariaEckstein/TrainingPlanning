@@ -40,7 +40,7 @@ See script `AnalyzingBackgroundAndIdeas`.
 
 # PART 2: Statistical Analyses
 
-After completing the experiment, some subjects reported that they had explored the reward probabilities of different *keys* rather than *fractals* in the 2-step task because they mistrusted the accuracy of the task instructions after receiving reward at a rather low rate. In addition, we had noticed during administration of the 2-step task that when getting tired, some subjects tended to repeat the same key for considerable durations, neglecting the task. To remove clean the data from both of these sources of noise, we decided to exclude all trials from the *switch-stay analysis*, in which the same key had been pressed more than 9 times in a row. (We argue that removing these trials is justified because the probability that 10 consecutive trials required pressing the same key 10 times in a row is negligibly low, i.e., $0.5^{10} = `r round(0.5 ^ 10 * 100, 3)`$ percent). For the *parameter analysis*, an additional parameter $k$ was added to the model, which captured *key perseverance*. ($k$ is described in more detail below.) 
+After completing the experiment, some subjects reported that they had explored the reward probabilities of different *keys* rather than *fractals* in the 2-step task because they mistrusted the accuracy of the task instructions after receiving reward at a rather low rate. In addition, we had noticed during administration of the 2-step task that when getting tired, some subjects tended to repeat the same key for considerable durations, neglecting the task. To clean the data from both of these sources of noise, we decided to exclude all trials from the *switch-stay analysis*, in which the same key had been pressed more than 9 times in a row. (Removing these trials is justified because the probability that 10 consecutive trials required pressing the same key 10 times in a row is negligibly low, i.e., $0.5^{10} = `r round(0.5 ^ 10 * 100, 3)`$ percent). For the *parameter analysis*, an additional parameter $k$ was added to the model, which captured *key perseverance*. ($k$ is described in more detail below.) 
 
 ```{r, results = F, warning = F}
 
@@ -52,18 +52,16 @@ After completing the experiment, some subjects reported that they had explored t
 
 data_source = "2016from_scratch"        # can be either 'empirical' (2015 data) or 'simulations' or 2016 (2016 data) or '2016from_scratch' (data from Berkeley XLab)?
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
-ggsave_figures = F                      # Save figures as pngs onto the computer?
+ggsave_figures = T                      # Save figures as pngs onto the computer?
 preprocess_data = F
-only_first_half = T
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
-figure_dir = file.path(home_dir, "Figures")
+figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
 data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
 model_dir = file.path(home_dir, "TwoStepTask/model")
-limits.stage1_choice_variation = 0.15   # Limit to exclude the whole 2-step task from one subject: Minimal necessary percentage of chosing the less-chosen 1st-stage stimulus, throughout a session. If a subject choses the less-chosen stimulus in less than 'limits.stage1_choice_variation' percent of trials (and choses the more-chosen stimulus more that '1 - limits.stage1_choice_variation'), than this subject will be excluded from further analyses. Set 'limits.stage1_choice_variation' to 0 if no subjects should be excluded.
-limits.key_perseverance_trials = 7      # Limit to exclude individual trials: In how many trials in a row may a subject press the same button without theses trials being excluded?
-limits.key_perseverance_subjects = 0.7   # Limit to exclude the whole 2-step task from one subject: What fraction of trials can a subject have excluded at most due to key perseverange (see above) without being exluded? That is, if subject data still contains (1 - limits.key_perseverance_subjects) percent of trials after key perseverance cleaning, they will remain in the data set; if they have less than limits.key_perseverance_subjects data points after cleaning, they will be removed completely.
-limits.trial_RTs = 150                  # Limit to exlcude individual trials: All trials with RT1 (= first-stage RT) faster than limits.trial_RTs will be excluded.
-limits.subject_fast_trials = 0.7         # Limit to exclude the whole 2-step task from one subject: What fraction of trials can a subject have excluded at most due to super-fast trials (see above) without being exluded? 
+limits.stage1_choice_variation = 0.025   # Limit to exclude the whole 2-step task from one subject: Minimal necessary percentage of chosing the less-chosen 1st-stage stimulus, throughout a session. If a subject choses the less-chosen stimulus in less than 'limits.stage1_choice_variation' percent of trials (and choses the more-chosen stimulus more that '1 - limits.stage1_choice_variation'), than this subject will be excluded from further analyses. Set 'limits.stage1_choice_variation' to 0 if no subjects should be excluded.
+limits.key_perseverance_trials = 15      # Limit to exclude individual trials: In how many trials in a row may a subject press the same button without theses trials being excluded?
+limits.trial_RTs = 100                  # Limit to exlcude individual trials: All trials with RT1 (= first-stage RT) faster than limits.trial_RTs will be excluded.
+limits.exclude_subject = 0.75   # Limit to exclude the whole 2-step task from one subject: Did the subject loose more than 75% of the data during pre-processing?
 ```
 
 ```{r, echo = F, results = F, warning = F, message = F}
@@ -76,8 +74,7 @@ library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); librar
 library("ggplot2"); theme_set(theme_bw())
 ```
 
-
-## Data Cleaning and Preprocessing
+## Read in Data
 
 ```{r, echo = F, results = F, warning = F, message = F}
 
@@ -126,10 +123,6 @@ if (data_source %in% c("2016from_scratch", "2016first_half") & preprocess_data) 
   write.csv(all_files, file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")), row.names = F)
 }
 all_files = read.csv(file.path(data_dir, paste("all_files", data_source, ".csv", sep = "")))
-
-if (only_first_half == T) {
-  all_files = subset(all_files, SubjID < 150)
-}
 
 # Get column classes right (cannot rename reward ("Reward", "NoReward") and transition because otherwise later things crash)
 all_files$session = factor(all_files$session, levels = c(1, 2), labels = c("Session 1", "Session 2"))
@@ -185,62 +178,62 @@ for (subj in unique(ts_orig$SubjID)) {
   }
 }
 
-##################
-### Clean data ###
-##################
+```
 
-## (1) Enough variation in 1st-stage choice
-## (2) Not too much key perseverance
-## (3) Not too fast RTs
+## Data Cleaning
 
-## (1) Enough variation in 1st-stage choice
-choice_variation = ddply(ts_orig, c("SubjID", "session", "run"), summarize,
-                         variation1 = mean((as.numeric(as.character(choice1)) - 1), na.rm = T))
-ts_with_variation = merge(ts_orig, choice_variation, by = c("SubjID", "session", "run"), all.x = T, sort = F)
-ts = subset(ts_with_variation, variation1 > limits.stage1_choice_variation & variation1 < (1 - limits.stage1_choice_variation) & SubjID != 36)
-ts$variation1 = NULL
+```{r, echo = F, warning = F}
+# Steps of data cleaning:
 
-## (2) Not too much key perseverance
-# Find key perseverance trials (the same 1st-stage key > 10 times; 0.5 ^ 10 = 0.00098); remove later for switch-stay analysis
-two_things  = find_perseverance_trials(data = ts, num_keys = limits.key_perseverance_trials)
-preproc_dat = add_group_columns(two_things[[2]])
-ts          = two_things[[1]]
-# Exclude subjects with too many key perseverances
-ts = merge(ts, subset(preproc_dat, select = c("run", "session", "SubjID", "percent")))
-ts = subset(ts, percent < limits.key_perseverance_subjects)
-ts$percent = NULL
+## (1) Remove first 20 trials (as training)
+## (2) Enough variation in 1st-stage choice
+## (3) Not too much key perseverance
+## (4) Not too fast RTs
 
-## (3) Not too fast RTs
-# Remove too fast trials (based on RT1; RT2 is not really normally distributed and excluding all trials < 100 would look weird)
-ts = subset(ts, RT1 > limits.trial_RTs)
-# And remove subjects who have too many too fast trials
-count_too_fast_RTs = ddply(subset(ts_orig, RT1 > 0),  # Don't exclude trials with RT == 0
-                           c("SubjID", "session", "run"), summarize,
-                           fast_trials = sum(RT1 < limits.trial_RTs))
-count_too_fast_RTs$fast_trials_perc = with(count_too_fast_RTs, fast_trials / length(unique(ts$trial)))
-ts = merge(ts, count_too_fast_RTs)
-ts = subset(ts, fast_trials_perc < limits.subject_fast_trials)
-ts$fast_trials = ts$fast_trials_perc = NULL
-
-## Combine the preprocessing data 
-preproc_dat = merge(preproc_dat, count_too_fast_RTs, by = c("SubjID", "session", "run"), all = T, sort = F)
-
-# Find out which subjects were excluded
-included_subj = ddply(ts,      .(SubjID, session, run), summarize, whatever = NA)
-all_subj      = ddply(ts_orig, .(SubjID, session, run), summarize, whatever = NA)
-excluded_subj = anti_join(all_subj, included_subj)
-excluded_subj = add_group_columns(excluded_subj)
-excluded_subj = excluded_subj[order(excluded_subj$session, excluded_subj$run, excluded_subj$SubjID), 1:3]
+## (1) Remove first 20 trials (as training)
+ts = subset(ts_orig, trial > 20)
 
 ## Fix runs for subj 106 (got versions A and B in the second session instead of C and D!!!)
 ts$run[ts$session == "Session 2" & ts$run == "Run 1"] = "Run 3"
 ts$run[ts$session == "Session 2" & ts$run == "Run 2"] = "Run 4"
 
-## Create switch-stay data
-if (!do_exclude_trials) {
-  ts = ts_orig
-}
+## (2) Enough variation in 1st-stage choice
+choice_variation = ddply(ts, c("SubjID", "session", "run"), summarize,
+                         variation1 = mean((as.numeric(as.character(choice1)) - 1), na.rm = T))
+choice_variation$no_var = F
+choice_variation$no_var[choice_variation$variation1 < limits.stage1_choice_variation | choice_variation$variation1 > (1 - limits.stage1_choice_variation)] = T
+ts_with_variation = merge(ts, choice_variation, by = c("SubjID", "session", "run"), all.x = T, sort = F)
+n_blocks_choice1_var = sum(choice_variation$no_var)   # Count how many are removed
+ts = subset(ts_with_variation, !no_var)
+ts$no_var = ts$variation1 = NULL
 
+## (3) Not too much key perseverance
+# Find key perseverance trials (the same 1st-stage key > 10 times; 0.5 ^ 10 = 0.00098); remove later for switch-stay analysis
+two_things  = find_perseverance_trials(data = ts, num_keys = limits.key_perseverance_trials)
+preproc_dat = add_group_columns(two_things[[2]])
+ts          = two_things[[1]]
+n_trials_key_pers = sum(ts$subj_run_persev)   # Count how many are removed
+ts = subset(ts, !subj_run_persev)
+
+## (4) Not too fast RTs
+# Remove too fast trials (based on RT1; RT2 is not really normally distributed and excluding all trials < 100 would look weird)
+count_too_fast_RTs = ddply(ts, c("SubjID", "session", "run"), summarize,
+                           fast_trials = sum(RT1 < limits.trial_RTs, na.rm = T))
+n_trials_fast = sum(ts$RT1 <= limits.trial_RTs, na.rm = T)   # Count how many are removed
+ts = subset(ts, RT1 > limits.trial_RTs)
+
+## (5) Lost more than 75% of data
+count_trials = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
+count_trials$few_trials = ifelse(count_trials$n_trials < limits.exclude_subject * 180, T, F)
+ts = merge(ts, count_trials)
+ts = subset(ts, !few_trials)
+ts$n_trials = ts$few_trials = NULL
+n_blocks_removed = nrow(subset(count_trials, few_trials))
+
+## Combine the preprocessing data 
+preproc_dat = merge(preproc_dat, count_too_fast_RTs, by = c("SubjID", "session", "run"), all = T, sort = F)
+
+## Create switch-stay data
 stay_dat  = ddply(subset(ts, !is.na(reward_prev_trial) & subj_run_persev == F),
                   .(SubjID, session, run, transi_prev_trial, reward_prev_trial, training, training_s1), summarize,
                   stays = sum(stay_first_stage, na.rm = T),
@@ -257,7 +250,40 @@ if (data_source == 2016 | data_source == "2016from_scratch") {
   ts$transi_prev_trial = factor(ts$transi_prev_trial, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
   ts$uncommon_trans = factor(ts$uncommon_trans, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
 }
+```
 
+## How much data is there?
+
+```{r, echo = F, warning = F}
+writeLines("Number of participants in each condition:\n")
+with(ddply(ts_orig, .(SubjID, run, training), summarize, RT1 = mean(RT1, na.rm = T)),
+     table(run, training))
+writeLines("\nTotal number of participants:")
+length(unique(ts_orig$SubjID))
+writeLines("\nTotal number of blocks:")
+blocks_orig_dat = ddply(ts_orig, .(SubjID), summarize, n_blocks = length(unique(run)))
+blocks_orig = sum(blocks_orig_dat$n_blocks)
+blocks_orig
+
+writeLines("\nNumber of participants after excluding:\n")
+with(ddply(ts, .(SubjID, run, training), summarize, RT1 = mean(RT1, na.rm = T)),
+     table(run, training))
+writeLines("\nTotal number of participants:")
+length(unique(ts$SubjID))
+writeLines("\nTotal number of blocks:")
+blocks_dat = ddply(ts, .(SubjID), summarize, n_blocks = length(unique(run)))
+blocks = sum(blocks_dat$n_blocks)
+blocks
+cat("\nNumber excluded perseverance trials (cut-off:", limits.key_perseverance_trials, "):\n")
+n_trials_key_pers
+n_trials_key_pers/blocks
+cat("\nNumber of excluded fast trials (cut-off:", limits.trial_RTs, "msec):\n")
+n_trials_fast
+n_trials_fast/blocks
+cat("\nNumber of excluded blocks because of lacking choice1 variation (cut-off:", limits.stage1_choice_variation, "msec):\n")
+n_blocks_choice1_var
+cat("\nNumber excluded blocks (cut-off:", 100 * limits.exclude_subject, "%):\n")
+n_blocks_removed
 ```
 
 ### Preprocessing results
@@ -275,21 +301,17 @@ gg_choice_variation = ggplot(choice_variation, aes(SubjID, 100 * variation1)) +
 gg_choice_variation
 
 gg_key_perseverance = ggplot(preproc_dat, aes(SubjID, percent * 100)) +
-  geom_point(aes(color = percent > limits.key_perseverance_subjects)) +
+  geom_point() +
   scale_color_manual(values = c("black", "red")) +
-  geom_hline(yintercept = limits.key_perseverance_subjects * 100, color = "red") +
-  geom_text(aes(label = ifelse(percent > limits.key_perseverance_subjects, SubjID, "")), hjust = 0, vjust = 0, size = 3) +
   coord_cartesian(ylim = c(0, 100)) +
   theme(legend.position = "none") +
   labs(y = "% key perseverance") +
   facet_wrap( ~ run)
 gg_key_perseverance
 
-gg_fast_RTs = ggplot(preproc_dat, aes(SubjID, fast_trials_perc * 100)) +
-  geom_point(aes(color = fast_trials_perc > limits.subject_fast_trials)) +
+gg_fast_RTs = ggplot(preproc_dat, aes(SubjID, fast_trials / 180 * 100)) +
+  geom_point() +
   scale_color_manual(values = c("black", "red")) +
-  geom_hline(yintercept = limits.subject_fast_trials * 100, color = "red") +
-  geom_text(aes(label = ifelse(fast_trials_perc > limits.subject_fast_trials, SubjID, "")), hjust = 0, vjust = 0, size = 3) +
   coord_cartesian(ylim = c(0, 100)) +
   theme(legend.position = "none") +
   labs(y = "% of super-fast trials (< 150 ms)") +
@@ -297,28 +319,22 @@ gg_fast_RTs = ggplot(preproc_dat, aes(SubjID, fast_trials_perc * 100)) +
 gg_fast_RTs
 ```
 
-### Excluded Participants
-```{r}
-excluded_subj
-```
 
 ## Did training change strategies?
 
 ### Switch-stay analysis
 
-One characteristic of a model-free strategy is to repeat choices ("*stay*") that were rewarded and to select different choices ("*switch*") when previous choices were not rewarded (but see paper by Falk's friend). Therefore, participants using a typical model-free strategy in the 2-step task should *stay* with their previously chosen first-stage fractal when they received a reward and should *switch* to the opposite first-stage fractal when they did not receive a reward. (Note that the model-free strategy does not take into account whether the transition from the first to the second pair of fractals was common or rare.) 
-
-A model-based 2-step strategy, on the other hand, is characterized by a very different pattern of *staying* and *switching*: When using this strategy, participants build a sophisticated model of the task structure and take transition probabilities into account when reasoning about future actions. These players should only stay with the same first-stage fractal after reward when the transition from first- to second-stage pair was *common* (indicating that the same first-stage choice will likely lead to the same second-stage fractal, which produced the desired reward), but not when the transition was *rare* (indicating that the same first-stage choice will likely *not* lead to the same second-stage fractal). The same is true for unrewarded choices: Players using the model-based strategy should also only switch away from a first-stage fractal after not receiving a reward when the transition was common, and not when it was rare.
-
-We tested whether the model-free and model-based training groups exhibited the expected strategies by analyzing switch-stay patterns in dependence of reward on previous trial (*reward* or *no reward*) and transition type on previous trial (*common* or *rare*), two weeks after each group had received the training (figure 1). 
-
-
-```{r, echo = F, fig.cap = "Switch-stay analysis of the 2-step task, for each run during the training. Fist plot: Only considering the training received in the first session. Second plot: each training group separately."}
-### Prepare data: subtract each particiapnt's mean stay probabilities
+```{r, echo = F, fig.cap = "Participants' absolute, raw probabilities."}
+# Prepare data
+## Relative stay probabilities: subtract each participant's mean stay probabilities
 subj_mean_stays = ddply(stay_dat, .(SubjID, session, run, training, training_s1), summarize,
                         mean_stay_prob = sum(stays, na.rm = T) / sum(trials, na.rm = T))
 stay_dat = merge(stay_dat, subj_mean_stays, by = c("SubjID", "session", "run", "training", "training_s1"), all.x = T, sort = F)
 stay_dat$rel_stay_prob = with(stay_dat, stay_prob - mean_stay_prob)
+
+## Change in stay probabilities
+# TD
+
 
 ### Plot
 x = 0; y = 1.15
@@ -327,15 +343,14 @@ if (data_source == 2015) {
   plot_dat_rel = subset(stay_dat, run == "Run 2" & !is.na(reward_prev_trial))
 } else if (data_source == 2016 | data_source == "2016from_scratch") {
   plot_dat = subset(stay_dat, !is.na(reward_prev_trial))
-  plot_dat_rel = subset(stay_dat, !is.na(reward_prev_trial))
 }
 
-stay_switch_plot_s1 = ggplot(plot_dat, aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+stay_switch_plot_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
   labs(x = "", y = "Stay probability", fill = "") +
-  coord_cartesian(ylim = c(.5, 1)) +
-  scale_y_continuous(breaks = seq(.6, 1, .2), labels = seq(.6, 1, .2)) +
+  coord_cartesian(ylim = c(.5, .85)) +
+  # scale_y_continuous(breaks = seq(.6, 1, .2), labels = seq(.6, 1, .2)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training_s1 ~ run)
@@ -351,33 +366,33 @@ stay_switch_plot = ggplot(plot_dat, aes(reward_prev_trial, stay_prob, fill = tra
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   # facet_wrap( ~ run)
   facet_grid(training ~ run)
-stay_switch_plot
 
 if (ggsave_figures) {
-  ggsave(plot = stay_switch_plot, filename = paste(figure_dir, "stay_switch_plot.png", sep = "/"), width = 7, height = 7)
-  ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 7, height = 7)
+  ggsave(plot = stay_switch_plot, filename = paste(figure_dir, "stay_switch_plot.png", sep = "/"), width = 5, height = 5)
+  ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 5, height = 5)
 }
 ```
 
-```{r, echo = F, fig.cap = "Change in switch-stay patterns over the runs. Fist plot: Only considering the training received in the first session. Second plot: each training group separately."}
+```{r, echo = F, fig.cap = "Probabilities relative to participants' baseline (= mean) stay probabilities."}
 
-stay_switch_plot_rel_s1 = ggplot(subset(plot_dat_rel), aes(reward_prev_trial, rel_stay_prob, fill = transi_prev_trial)) + #, color = transi_prev_trial)) +
+stay_switch_plot_rel_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_trial, rel_stay_prob, fill = transi_prev_trial)) + #, color = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
   # geom_point(alpha = 0.4, position = position_dodge(width = .9)) +
   # geom_text(aes(label = ifelse(abs(rel_stay_prob) > .1, as.character(SubjID), '')), hjust = 0, vjust = 0, position = position_dodge(width = .9), size = 3) +
-  labs(x = "", y = "Difference from subj's mean stay probability", fill = "") +
+  labs(x = "", y = "Relative stay prob.", fill = "") +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   # facet_wrap( ~ run)
   facet_grid(training_s1 ~ run)
+stay_switch_plot_rel_s1
 
-stay_switch_plot_rel = ggplot(plot_dat_rel, aes(reward_prev_trial, rel_stay_prob, fill = transi_prev_trial)) + #, color = transi_prev_trial)) +
+stay_switch_plot_rel = ggplot(plot_dat, aes(reward_prev_trial, rel_stay_prob, fill = transi_prev_trial)) + #, color = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
   # geom_point(alpha = 0.4, position = position_dodge(width = .9)) +
   # geom_text(aes(label = ifelse(abs(rel_stay_prob) > .1, as.character(SubjID), '')), hjust = 0, vjust = 0, position = position_dodge(width = .9), size = 3) +
-  labs(x = "", y = "Difference from subj's mean stay probability", fill = "") +
+  labs(x = "", y = "Relative stay prob.", fill = "") +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   # facet_wrap( ~ run)
@@ -389,119 +404,129 @@ if (ggsave_figures) {
 }
 ```
 
+```{r, echo = F, warning = F, fig.cap = "Changes over time: Within-participant differences between Run 1 and Runs 2 and 3."}
 
-```{r, echo = F, fig.cap = "Regression on all data sets. Do reward, transition, and their interaction predict stay probabilities?"}
+
+```
+
+## Stats: Logistic regression (switch_stay ~ reward * transition)
+
+```{r, echo = F, fig.cap = "Logistic regression: Stay ~ 1 + reward * transition"}
 ### Switch-stay stats
-# Only looking at the first training (runs1-3)
 if (preprocess_data) {
-  switch_stay_stats = data.frame(run = NA, training = NA, predictor = NA, z = NA, p = NA)[0,]
+  
+  # Logistic regression separately for each group and run (Stay ~ 1 + reward * transition)
+  switch_stay_stats_run_train = data.frame(predictor = NA, run = NA, training = NA, z = NA, p = NA)[0,]
   row = 1
   for (runi in unique(stay_dat$run)) {
-    for (traini in unique(stay_dat$training)) {
-      model_dat = subset(ts, run == runi & training == traini)
+    for (traini in unique(stay_dat$training_s1)) {
+      model_dat = subset(ts, run == runi & training_s1 == traini, select = c("SubjID", "run", "training_s1", "stay_first_stage", "reward_prev_trial", "transi_prev_trial"))
       model_dat$SubjID = factor(model_dat$SubjID)
       model_dat$stay_first_stage = factor(model_dat$stay_first_stage)
-      contrasts(model_dat$reward_prev_trial) = c(-1, 1)
-      contrasts(model_dat$transi_prev_trial) = c(-1, 1)
+      contrasts(model_dat$reward_prev_trial) = c(1, -1)
+      contrasts(model_dat$transi_prev_trial) = c(1, -1)
       
       if (!empty(model_dat)) {
         mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial + (reward_prev_trial * transi_prev_trial | SubjID),
               family = binomial, control = glmerControl(optimizer = "bobyqa"),
               data = model_dat)
-        ano = Anova(mod, type = 3)
         
-        switch_stay_stats[row,]   = c(runi, traini, "rew", coefficients(summary(mod))[2, 3], coefficients(summary(mod))[2, 4])
-        switch_stay_stats[row+1,] = c(runi, traini, "tra", coefficients(summary(mod))[3, 3], coefficients(summary(mod))[3, 4])
-        switch_stay_stats[row+2,] = c(runi, traini, "int", coefficients(summary(mod))[4, 3], coefficients(summary(mod))[4, 4])
+        switch_stay_stats_run_train[row:(row+3),1] = c("sta", "rew", "tra", "int")   # Which predictor?
+        switch_stay_stats_run_train[row:(row+3),2:3] = c(rep(runi, 4), rep(traini, 4))   # Run and group
+        switch_stay_stats_run_train[row:(row+3),4:5] = coefficients(summary(mod))[,3:4]   # z and p values
         
-        row = row + 3
+        row = row + 4
+        
       }
     }
   }
-  switch_stay_stats$z = as.numeric(switch_stay_stats$z)
-  switch_stay_stats$predictor = factor(switch_stay_stats$predictor, levels = c("rew", "tra", "int"))
-  switch_stay_stats$sig = "ns"
-  switch_stay_stats$sig[switch_stay_stats$p <= 0.05] = "sig"
   
-  write.csv(switch_stay_stats, file.path(data_dir, paste("switch_stay_stats", data_source, ".csv", sep = "")), row.names = F)
-} else {
-  switch_stay_stats = read.csv(file.path(data_dir, paste("switch_stay_stats", data_source, ".csv", sep = "")))
-}
-# switch_stay_stats_s1 = data.frame(run = NA, training_s1 = NA, predictor = NA, chisq = NA, p = NA)[0,]
-# row = 1
-# for (runi in unique(stay_dat$run)) {
-#   for (traini in unique(stay_dat$training_s1)) {
-#     model_dat = subset(stay_dat, run == runi & training_s1 == traini & !is.na(reward_prev_trial)) #
-#     
-#     if (!empty(model_dat)) {
-#       bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
-#       rew = update(bas, .~. + reward_prev_trial)
-#       tra = update(rew, .~. + transi_prev_trial)
-#       int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
-#       a = anova(bas, rew, tra, int)
-#       
-#       switch_stay_stats_s1[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
-#       switch_stay_stats_s1[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
-#       switch_stay_stats_s1[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
-#       
-#       row = row + 3
-#     }
-#   }
-# }
-# switch_stay_stats_s1$chisq = as.numeric(switch_stay_stats_s1$chisq)
-# switch_stay_stats_s1$predictor = factor(switch_stay_stats_s1$predictor, levels = c("rew", "tra", "int"))
-# switch_stay_stats_s1$sig = "ns"
-# switch_stay_stats_s1$sig[switch_stay_stats_s1$p <= 0.05] = "sig"
-# 
-# # For the five separate training groups
-# switch_stay_stats = data.frame(run = NA, training = NA, predictor = NA, chisq = NA, p = NA)[0,]
-# row = 1
-# for (runi in unique(stay_dat$run)) {
-#   for (traini in unique(stay_dat$training)) {
-#     model_dat = subset(stay_dat, run == runi & training == traini & !is.na(reward_prev_trial)) #
-#     
-#     if (!empty(model_dat)) {
-#       bas = lme(stay_prob ~ 1, random = ~1|SubjID, data = model_dat, method = "ML")
-#       rew = update(bas, .~. + reward_prev_trial)
-#       tra = update(rew, .~. + transi_prev_trial)
-#       int = update(tra, .~. + reward_prev_trial:transi_prev_trial)
-#       a = anova(bas, rew, tra, int)
-#       
-#       switch_stay_stats[row,]   = c(runi, traini, "rew", a$L.Ratio[2], a$`p-value`[2])
-#       switch_stay_stats[row+1,] = c(runi, traini, "tra", a$L.Ratio[3], a$`p-value`[3])
-#       switch_stay_stats[row+2,] = c(runi, traini, "int", a$L.Ratio[4], a$`p-value`[4])
-#       
-#       row = row + 3
-#     }
-#   }
-# }
-# switch_stay_stats$chisq = as.numeric(switch_stay_stats$chisq)
-# switch_stay_stats$predictor = factor(switch_stay_stats$predictor, levels = c("rew", "tra", "int"))
-# switch_stay_stats$sig = "ns"
-# switch_stay_stats$sig[switch_stay_stats$p <= 0.05] = "sig"
+  # Logistic regression by run, for all groups to compare groups (Stay ~ 1 + reward * transition * training_s1)
+  switch_stay_stats_run = data.frame(predictor = NA, run = NA, chisq = NA, df = NA, p = NA)[0,]
+  row = 1
+  for (runi in unique(stay_dat$run)) {
+    model_dat = subset(ts, run == runi)
+    model_dat$SubjID = factor(model_dat$SubjID)
+    model_dat$stay_first_stage = factor(model_dat$stay_first_stage)
+    contrasts(model_dat$reward_prev_trial) = c(-1, 1)
+    contrasts(model_dat$transi_prev_trial) = c(-1, 1)
+    contrasts(model_dat$training_s1) = cbind(c(-2, 1, 1), c(0,-1, 1))
+    
+    if (!empty(model_dat)) {
+      mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),
+            family = binomial, control = glmerControl(optimizer = "bobyqa"),
+            data = model_dat)
+      aov = Anova(mod, type = 3)
+      
+      switch_stay_stats_run[row:(row+7),1] = c("sta", "rew", "tra", "gro", "int", "rewgro", "tragro", "intgro")   # Which predictor?
+      switch_stay_stats_run[row:(row+7),2] = rep(runi, 4)   # Run and group
+      switch_stay_stats_run[row:(row+7),3:5] = aov   # z and p values
 
-### Plots
-# 3 groups
-# gg_overall_stats_s1 = ggplot(subset(switch_stay_stats_s1), aes(predictor, chisq, shape = sig)) +
-#   geom_point(color = "darkblue") +
-#   scale_shape_manual(values = c(1, 16)) +
-#   geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 2), "")), hjust = 0, vjust = 0, size = 3) +
-#   labs(x = "", y = "Chi squared") +
-#   theme(legend.position = "none") +
-#   facet_grid(training_s1 ~ run)
-# gg_overall_stats_s1
-# 5 groups
-gg_overall_stats = ggplot(switch_stay_stats, aes(predictor, z, shape = sig)) +
+      row = row + 8
+    }
+  }
+  
+  # Complete model (Stay ~ 1 + reward + transition + reward:transition + reward:training + reward:transition:training + reward:run + reward:transition:run)
+  mod = glmer(stay_first_stage ~ reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training + reward_prev_trial:transi_prev_trial:training + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run +
+                (reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
+      family = binomial, control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6)),
+      data = subset(ts, !is.na(reward_prev_trial) & run != "Run 4"))
+  switch_stay = coefficients(summary(mod))
+  
+  write.csv(switch_stay_stats_run_train, file.path(data_dir, paste("switch_stay_stats_run_train", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(switch_stay_stats_run, file.path(data_dir, paste("switch_stay_stats_run", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(switch_stay, file.path(data_dir, paste("switch_stay", data_source, ".csv", sep = "")), row.names = T)
+  
+}
+
+# Read data from disc
+switch_stay_stats_run_train = read.csv(file.path(data_dir, paste("switch_stay_stats_run_train", data_source, ".csv", sep = "")))
+switch_stay_stats_run = read.csv(file.path(data_dir, paste("switch_stay_stats", data_source, ".csv", sep = "")))
+switch_stay = read.csv(file.path(data_dir, paste("switch_stay", data_source, ".csv", sep = "")))
+
+switch_stay_stats_run$z = as.numeric(switch_stay_stats_run$z)
+switch_stay_stats_run$predictor = factor(switch_stay_stats_run$predictor, levels = c("sta", "rew", "tra", "int"))
+switch_stay_stats_run$sig = "ns"
+switch_stay_stats_run$sig[switch_stay_stats_run$p <= 0.05] = "sig"
+switch_stay_stats_run[is.na(switch_stay_stats_run$predictor),]$predictor
+
+switch_stay_stats_run_train$z = as.numeric(switch_stay_stats_run_train$z)
+switch_stay_stats_run_train$predictor = factor(switch_stay_stats_run_train$predictor, levels = c("sta", "rew", "tra", "int"))
+switch_stay_stats_run_train$sig = "ns"
+switch_stay_stats_run_train$sig[switch_stay_stats_run_train$p <= 0.05] = "sig"
+switch_stay_stats_run_train[is.na(switch_stay_stats_run_train$predictor),]$predictor
+
+## Plot / show
+### Separate for runs and groups
+gg_overall_stats = ggplot(subset(switch_stay_stats_run_train, run != "Run 4"), aes(predictor, z, shape = sig)) +
   geom_point(color = "darkblue") +
   scale_shape_manual(values = c(1, 16)) +
-  geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 2), "")), hjust = 0, vjust = 0, size = 3) +
+  geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 3), "")), hjust = 0, vjust = 0, size = 3) +
   labs(x = "", y = "z") +
   theme(legend.position = "none") +
   facet_grid(training ~ run)
 gg_overall_stats
+
+### By runs, comparing groups
+gg_overall_stats_run = ggplot(subset(switch_stay_stats_run, run != "Run 4"), aes(predictor, z, shape = sig)) +
+  geom_point(color = "darkblue") +
+  scale_shape_manual(values = c(1, 16)) +
+  geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 3), "")), hjust = 0, vjust = 0, size = 3) +
+  labs(x = "", y = "z") +
+  theme(legend.position = "none") +
+  facet_grid(training ~ run)
+gg_overall_stats_run
+# switch_stay_stats_run
+
+### Grand model
+switch_stay
+
+if (ggsave_figures) {
+  ggsave(plot = gg_overall_stats, filename = paste(figure_dir, "stay_switch_plot_stats.png", sep = "/"), width = 5, height = 5)
+}
 ```
 
-### Logistic regression (switch_stay ~ stay + reward + transition + interaction + correct)
+### Separate logistic regression for each participant (switch_stay ~ stay + reward + transition + interaction + correct)
 
 ```{r, echo = F, warning = F, message = F, fig.cap = "Log odds"}
 
@@ -661,6 +686,7 @@ logist_regr_data_AICs_long_p$effect = as.character(logist_regr_data_AICs_long_p$
 logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_cor"] = "cor"
 logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_rep"] = "rep"
 logist_regr_data_AICs_long = merge(logist_regr_data_AICs_long_Chi, logist_regr_data_AICs_long_p, by = c("run", "SubjID", "training", "effect"))
+
 gg_logregr_modelfitsdiffs = ggplot(logist_regr_data_AICs_long, aes(effect, Chi_diff)) +
   stat_summary(fun.y = mean, geom = "bar") +
   geom_point(aes(shape = p < 0.05), alpha = .3, color = "darkblue") +#, position = "jitter") +
@@ -670,7 +696,6 @@ gg_logregr_modelfitsdiffs = ggplot(logist_regr_data_AICs_long, aes(effect, Chi_d
   labs(x = "Predictor", y = "Difference in deviances", shape = "sig.") +
   theme(legend.position = c(.8, .3)) +
   facet_wrap(~ run)
-gg_logregr_modelfitsdiffs
 
 logist_regr_ttests = data.frame(run = NA, effect = NA, t = NA, p = NA)[0,]
 row = 1
@@ -738,7 +763,7 @@ gg_manipcheck = ggplot(lagged_switch_stay_stage2, aes(lag, stay_percent, color =
   # facet_wrap(~ run)
 
 # Lagged stay probabilities
-gg_lagged_swista_s1 = ggplot(lagged_switch_stay, aes(lag, stay_percent, color = condition)) +
+gg_lagged_swista_s1 = ggplot(subset(lagged_switch_stay, run != "Run 4"), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
@@ -746,7 +771,7 @@ gg_lagged_swista_s1 = ggplot(lagged_switch_stay, aes(lag, stay_percent, color = 
   # geom_text(aes(label = ifelse(abs(stay_percent) > .1, as.character(SubjID), '')), hjust = 0, vjust = 0, size = 2.5, position = position_dodge(width = .9)) +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   labs(x = "Lag", y = "Stay trials (%)", color = "") +
   facet_grid(training_s1 ~ run)
@@ -761,19 +786,18 @@ gg_lagged_swista = ggplot(lagged_switch_stay, aes(lag, stay_percent, color = con
   # geom_text(aes(label = ifelse(abs(stay_percent) > .1, as.character(SubjID), '')), hjust = 0, vjust = 0, size = 2.5, position = position_dodge(width = .9)) +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   labs(x = "Lag", y = "Stay trials (%)", color = "") +
   facet_grid(training ~ run)
   # facet_wrap(~ run)
-gg_lagged_swista
 
 gg_lagged_swista_smooth = ggplot(lagged_switch_stay_smooth, aes(lag, smooth_stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training ~ run)
   # facet_wrap(~ run)
@@ -787,7 +811,7 @@ gg_lagged_logodds = ggplot(class_lagged_effects, aes(lag, log_odds, color = cond
   geom_text(aes(label = ifelse(abs(log_odds) > 4, as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training ~ run)
   # facet_wrap(~ run)
@@ -801,7 +825,7 @@ gg_lagged_regr_odds = ggplot(class_lagged_regr_plot_dat, aes(lag, log_odds, colo
   # geom_text(aes(label = ifelse(abs(log_odds) > 4, as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training ~ run)
   # facet_wrap(~ run)
@@ -814,7 +838,7 @@ gg_lagged_regr_odds_s1 = ggplot(subset(class_lagged_regr_plot_dat), aes(lag, log
   # geom_text(aes(label = ifelse(abs(log_odds) > 4, as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training_s1 ~ run)
   # facet_wrap(~ run)
@@ -824,7 +848,7 @@ gg_lagged_logodds_smooth = ggplot(subset(class_smooth_lagged_effects, condition 
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = "none") +#"left", legend.background = element_rect(fill = "transparent")) +
   facet_grid(training ~ run)
   # facet_wrap(~ run)
@@ -835,15 +859,15 @@ gg_lagged_logodds_smooth = ggplot(subset(class_smooth_lagged_effects, condition 
 # Create data
 
 # Plot
-new_lagged_regr_plot_dat = subset(new_lagged_effects, abs(log_odds) < quantile(abs(log_odds), 0.95, na.rm = T))
+new_lagged_regr_plot_dat = subset(new_lagged_effects, run != "Run 4" & abs(log_odds) < quantile(abs(log_odds), 0.95, na.rm = T))
 gg_lagged_logodds_6 = ggplot(new_lagged_regr_plot_dat, aes(lag, log_odds, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
   # geom_point(alpha = 0.4, position = "jitter") +
   # geom_line(aes(group = SubjID), alpha = 0.4) +
-  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink", "yellow", "orange")) +
-  scale_x_continuous(breaks = -1:-10, limits = c(-7, -1)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "yellow", "red", "pink", "orange")) +
+  scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   # facet_grid(training ~ run)
   facet_grid(training_s1 ~ run)
@@ -857,82 +881,7 @@ gg_manipcheck
 ```
 
 
-```{r, echo = F}
-### Analyze the stay probabilities (differences between groups)
-## Regression: create models (Session 2, Run 2)
-# baseline_model = lme(stay_prob ~ 1, random = ~1|SubjID, data = subset(stay_dat, run == "Run 2" & session == "Session 2"), method = "ML")
-# training_model = update(baseline_model, .~. + training)
-# reward_model = update(training_model, .~. + reward_prev_trial)
-# transition_model = update(reward_model, .~. + transi_prev_trial)
-# training_reward_model = update(transition_model, .~. + training:reward_prev_trial)
-# training_transition_model = update(training_reward_model, .~. + training:transi_prev_trial)
-# transition_reward_model = update(training_transition_model, .~. + reward_prev_trial:transi_prev_trial)
-# training_reward_transition_model = update(transition_reward_model, .~. + training*reward_prev_trial*transi_prev_trial)
-# full_model = update(baseline_model, .~. + training*reward_prev_trial*transi_prev_trial)
-# # Evaluate models
-# regression_r2 = anova(baseline_model,
-#                training_model, reward_model, transition_model,
-#                training_reward_model, training_transition_model, transition_reward_model,
-#                training_reward_transition_model,
-#                full_model)
-# regression_r2
-
-## ANOVA
-# anova_r2 = aov(stay_prob ~ (training * session * reward_prev_trial * transi_prev_trial) + training + Error(SubjID/(session * reward_prev_trial * transi_prev_trial)), data = stay_dat_r1)
-# summary(anova_r2)
-
-## Get the p, b, and chi values of significant (and expected) effects
-# reward_b = summary(reward_model)[["coefficients"]][["fixed"]][[3]]
-# reward_p = regression_r2[["p-value"]][[3]]
-# reward_chi = regression_r2[["L.Ratio"]][[3]]
-# reward_df = regression_r2[["df"]][[3]]
-# 
-# train_b = summary(training_model)[["coefficients"]][["fixed"]][[2]]
-# train_p = regression_r2[["p-value"]][[2]]
-# train_chi = regression_r2[["L.Ratio"]][[2]]
-# train_df = regression_r2[["df"]][[2]]
-# 
-# trans_rew_b = summary(transition_reward_model)[["coefficients"]][["fixed"]][[7]]
-# trans_rew_p = regression_r2[["p-value"]][[7]]
-# trans_rew_chi = regression_r2[["L.Ratio"]][[7]]
-# trans_rew_df = regression_r2[["df"]][[7]]
-# 
-# train_rew_trans_b = summary(training_reward_transition_model)[["coefficients"]][["fixed"]][[8]]
-# train_rew_trans_p = regression_r2[["p-value"]][[8]]
-# train_rew_trans_chi = regression_r2[["L.Ratio"]][[8]]
-# train_rew_trans_df = regression_r2[["df"]][[8]]
-```
-
-Next, we used a multilevel linear model to test for the statistical significance of the model-free and model-based strategy components and the group differences shown in figure 1. We modeled effects of the second session only, subjects were nested within trainings and we chose the predictors *training* (model-based vs. model-free), *reward* (vs. no reward), and *transition type* (common vs. rare) on the outcome *stay probability*. In this model, a main effect of reward would indicate the presence of a model-free strategy component (only previous rewards determine stay probabilities) and an interaction between transition type and reward would indicate the presence of a model-based component (not only previous rewards, but also transition types determine stay probabilities). Crucially, a triple interaction between training, reward, and transition would indicate that the training groups employed different strategies. 
-
-```{r, echo = F}
-### Diff models ###
-# baseline_model = lme(diff_stay_prob ~ 1, random = ~1|SubjID, data = cor_stay_dat, method = "ML")
-# training_model = update(baseline_model, .~. + training)
-# reward_model = update(training_model, .~. + reward_prev_trial)
-# transition_model = update(reward_model, .~. + transi_prev_trial)
-# transition_reward_model = update(transition_model, .~. + reward_prev_trial:transi_prev_trial)
-# training_reward_model = update(transition_reward_model, .~. + training:reward_prev_trial)
-# transition_training_model = update(training_reward_model, .~. + transi_prev_trial:training)
-# training_reward_transition_model = update(transition_training_model, .~. + training*transi_prev_trial*reward_prev_trial)
-# full_model = update(baseline_model, .~. + training*reward_prev_trial*transi_prev_trial)
-# 
-# diff_regression = anova(baseline_model,
-#               training_model, reward_model, transition_model,
-#               transition_reward_model, training_reward_model, transition_training_model,
-#               training_reward_transition_model,
-#               full_model)
-# # diff_regression
-# 
-# ps = diff_regression[["p-value"]]
-# chis = diff_regression[["L.Ratio"]]
-```
-
 ### Reinforcement learning model analysis
-
-We built reinforcement learning models for the 2-step task similar to Daw, Wunderlich, other 2-step people (cite). The models contained a number of parameters that determine different aspect of the decision process (e.g., the learning rate $\alpha$ determines how much impact each novel experience - in terms of received rewards - has on the player's subjective value of each available action; if $\alpha$ is close to 1, the player's action values are immediatly adjusted to each new incoming piece of information (highly flexible learner), whereas when $\alpha$ is close to 0, action values are adjusted negligibly in response to new experience (very conservative learner); in addition to the learning rate $\alpha$, the models contained the parameters softmax temperature $\beta$, choice perseverance $p$, and key perseverance $k$). Crucially, the model is a compount of a separate model-based and a model-free strategy. The model-based and model-free components are combined linearly according to: $fullmodel = w * modelbased + (1 - w) * modelfree$. Therefore, the parameter $w$ indicates the relative weight of model-based and model-free strategies employed. 
-
-We used a genetic algorithm (Matlab's `ga` function) in combination with a minimizing function (`fmincon`) to find for each participant the set of parameters that would minimize the discrepency between the decisions predicted by the model based on these parameters and the participant's observed decisions in the task. In other words, each participant's decisions can be expressed as a specific set of parameters in a general reinforcement learning model. (The goodness of fit of the model, given a set of parameters, to the data of each participants varies from data set to data set.)
 
 ```{r, echo = F, results = F, warning = F, message = F}
 
@@ -953,7 +902,7 @@ for (file_name in file_names) {
   colnames(par_file) = ts_colnames
   # Add model name (params) and number of parameters (num_par)
   params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim.mat")[[1]][1]
-  num_par = sum(par_file[1,2:9] != 0)
+  num_par = 0   # can't count how many parameters because some are 0, some 1, some 0.5... would have to check for parameters with sd == 0 to make it work
   session = paste("Session", ifelse(par_file$run %in% c(1, 2), 1, 2))
   par_file = cbind(par_file, params, num_par, session)
   # Add current file to the big file
@@ -961,24 +910,22 @@ for (file_name in file_names) {
 }
 ts_params = subset(ts_params, run %in% 1:4)
 ts_params$run = paste("Run", ts_params$run)
-if (only_first_half == T) {
-  ts_params = subset(ts_params, SubjID < 150)
-}
+ts_params$run = factor(ts_params$run)
 
 ### Exclude bad subjects
-ts_params$excluded = FALSE
-for (rowi in 1:nrow(excluded_subj)) {
-  ex_row = excluded_subj[rowi,]
-  ts_params$excluded[ts_params$SubjID == as.numeric(as.character(ex_row$SubjID)) & ts_params$session == ex_row$session & as.character(ts_params$run) == as.character(ex_row$run)] = TRUE
-}
+# ts_params$excluded = FALSE
+# for (rowi in 1:nrow(excluded_subj)) {
+#   ex_row = excluded_subj[rowi,]
+#   ts_params$excluded[ts_params$SubjID == as.numeric(as.character(ex_row$SubjID)) & ts_params$session == ex_row$session & as.character(ts_params$run) == as.character(ex_row$run)] = TRUE
+# }
 ### Exclude outlier BICs
 ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)))
-ts_params = subset(ts_params, excluded == FALSE)
-ts_params$excluded = NULL
+# ts_params = subset(ts_params, excluded == FALSE)
+# ts_params$excluded = NULL
 
 summary(ts_params)
 
-### Normalize parameters (accidentally deleted - necssary for old data)
+### Normalize parameters (part accidentally deleted - necssary for old data)
 ts_params = add_group_columns(ts_params)
 ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC"))
 colnames(ts_params_molten) = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "parameter", "estimate")
@@ -1015,19 +962,28 @@ rel_BIC$l0 = with(rel_BIC, BIC.hyb - BIC.l0)
 rel_BIC$l1 = with(rel_BIC, BIC.hyb - BIC.l1)
 rel_BIC$nok_mb = with(rel_BIC, BIC.hyb - BIC.nok_mb)
 rel_BIC$nok_mf = with(rel_BIC, BIC.hyb - BIC.nok_mf)
-# rel_BIC$nok_l0 = with(rel_BIC, BIC.hyb - BIC.nok_l0)
+rel_BIC$nok_l0 = with(rel_BIC, BIC.hyb - BIC.nok_l0)
 rel_BIC$nok_l1 = with(rel_BIC, BIC.hyb - BIC.nok_l1)
 rel_BIC$a1b1_nok = with(rel_BIC, BIC.hyb - BIC.a1b1_nok)
 summary(rel_BIC)
-rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1_nok, BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok_l1, BIC.nok_l1, BIC.nok_mb, BIC.nok_mf, BIC.nok, BIC.nop, BIC.nopk)),
+rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1_nok, BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok_l0, BIC.nok_l1, BIC.nok_mb, BIC.nok_mf, BIC.nok, BIC.nop, BIC.nopk)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
 
 # Plot relative BICs
-gg_rel_BIC = ggplot(rel_BIC_molten, aes(variable, -value)) +
+gg_rel_BIC = ggplot(subset(rel_BIC_molten, run != "Run 4"), aes(variable, -value)) +
   geom_point(position = "jitter", alpha = 0.2) +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange", color = "red") +
   labs(x = "", y = "model BIC - hyb BIC")
 gg_rel_BIC
+
+gg_rel_BIC_by_group = gg_rel_BIC +
+  facet_grid(run ~ training_s1)
+gg_rel_BIC_by_group
+
+if (ggsave_figures) {
+  ggsave(file.path(figure_dir, "gg_rel_BIC.png"), gg_rel_BIC)
+  ggsave(file.path(figure_dir, "gg_rel_BIC_by_group.png"), gg_rel_BIC_by_group)
+}
 
 # Stats
 nok_total = sum(!is.na(rel_BIC$nok))
@@ -1215,66 +1171,63 @@ if (data_source != "2016from_scratch") {
 ```
 
 ```{r, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
-if (data_source != "2016from_scratch") {
-  
-  diff_dat = data.frame(SubjID = NA, runs = NA, parameter = NA, estimate = NA)[0,]
-  rests = dat
-  row = 1
-  for (parami in unique(selected_parameter_dat$parameter)) {
-    for (subj in unique(selected_parameter_dat$SubjID)) {
+diff_dat = data.frame(SubjID = NA, runs = NA, parameter = NA, estimate = NA)[0,]
+row = 1
+for (parami in unique(selected_parameter_dat$parameter)) {
+  for (subj in unique(selected_parameter_dat$SubjID)) {
+    
+    dat = subset(selected_parameter_dat, parameter == parami & SubjID == subj)
+    
+    if (nrow(dat) == 4) {
+      estim1 = subset(dat, run == "Run 1")$estimate
+      estim2 = subset(dat, run == "Run 2")$estimate
+      estim3 = subset(dat, run == "Run 3")$estimate
+      estim4 = subset(dat, run == "Run 4")$estimate
       
-      dat = subset(selected_parameter_dat, parameter == parami & SubjID == subj)
+      d12 = estim2 - estim1
+      d23 = estim3 - estim2
+      d34 = estim4 - estim3
+      d13 = estim3 - estim1
+      d14 = estim4 - estim1
+    
+      if (length(d12) > 0) {diff_dat[row,]   = c(subj, 12, parami, d12)}
+      if (length(d23) > 0) {diff_dat[row+1,] = c(subj, 23, parami, d23)}
+      if (length(d23) > 0) {diff_dat[row+2,] = c(subj, 34, parami, d34)}
+      if (length(d13) > 0) {diff_dat[row+3,] = c(subj, 13, parami, d13)}
+      if (length(d14) > 0) {diff_dat[row+4,] = c(subj, 14, parami, d14)}
       
-      if (nrow(dat) == 4) {
-        estim1 = subset(dat, run == "Run 1")$estimate
-        estim2 = subset(dat, run == "Run 2")$estimate
-        estim3 = subset(dat, run == "Run 3")$estimate
-        estim4 = subset(dat, run == "Run 4")$estimate
-        
-        d12 = estim2 - estim1
-        d23 = estim3 - estim2
-        d34 = estim4 - estim3
-        d13 = estim3 - estim1
-        d14 = estim4 - estim1
-      
-        if (length(d12) > 0) {diff_dat[row,]   = c(subj, 12, parami, d12)}
-        if (length(d23) > 0) {diff_dat[row+1,] = c(subj, 23, parami, d23)}
-        if (length(d23) > 0) {diff_dat[row+2,] = c(subj, 34, parami, d34)}
-        if (length(d13) > 0) {diff_dat[row+3,] = c(subj, 13, parami, d13)}
-        if (length(d14) > 0) {diff_dat[row+4,] = c(subj, 14, parami, d14)}
-        
-        row = row + 5
-      }
+      row = row + 5
     }
   }
-  
-  
-  diff_dat = add_group_columns(subset(diff_dat, !is.na(SubjID)))
-  diff_dat$estimate = as.numeric(diff_dat$estimate)
-  diff_dat$runs = factor(as.character(diff_dat$runs))
-  diff_dat$SubjID = factor(diff_dat$SubjID)
-  diff_dat$parameter = factor(diff_dat$parameter)
-  
-  summary(diff_dat)
-  
-  gg_param_changes_s1 = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
-    stat_summary(fun.y = mean, geom = "point") +
-    stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-    geom_point(alpha = .4) +
-    theme(legend.position = "none") +
-    labs(x = "", y = "Change in parameters between runs") +
-    facet_grid(training_s1 ~ runs)
-  gg_param_changes_s1
-  
-  gg_param_changes = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
-    stat_summary(fun.y = mean, geom = "point") +
-    stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-    geom_point(alpha = .4) +
-    theme(legend.position = "none") +
-    labs(x = "", y = "Change in parameters between runs") +
-    facet_grid(training ~ runs)
-  gg_param_changes
 }
+
+
+diff_dat = add_group_columns(subset(diff_dat, !is.na(SubjID)))
+diff_dat$estimate = as.numeric(diff_dat$estimate)
+diff_dat$runs = factor(as.character(diff_dat$runs))
+diff_dat$SubjID = factor(diff_dat$SubjID)
+diff_dat$parameter = factor(diff_dat$parameter)
+
+summary(diff_dat)
+
+gg_param_changes_s1 = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
+  stat_summary(fun.y = mean, geom = "point") +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +   # SE instead of cl!
+  geom_point(alpha = .4) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Change in parameters between runs") +
+  facet_grid(training_s1 ~ runs)
+gg_param_changes_s1
+
+gg_param_changes = ggplot(diff_dat, aes(parameter, estimate, color = parameter != "w")) +
+  stat_summary(fun.y = mean, geom = "point") +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+  geom_point(alpha = .4) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Change in parameters between runs") +
+  facet_grid(training ~ runs)
+gg_param_changes
+
 ```
 
 
