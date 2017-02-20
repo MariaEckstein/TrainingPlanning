@@ -63,6 +63,8 @@ Reinforcement Learning Model-based Model-free Decision Making
 \section{Questions:}
 \begin{itemize}
 	\item Do the same preprocessing for behavioral and model analysis? (Exclude fast trials (100msec); choice-1 variation; key perseverance; exclude first 20 trials)
+	\item Do I exclude key rep trials if I include key rep in the regression models?
+	\item Plot absolute switch-stay probs, or relative to each subject's mean?
 \end{itemize}
 
 \section{TDs:}
@@ -87,7 +89,7 @@ Humans make many decisions and solve a large number of problems every day: Which
 
 These two opposing characterizations of decision making, behaviorist and cognitivist, are mirrored in the third big framework of machine learning beside supervised and unsupervised learning---in reinforcement learning (Sutton \& Barto, 2012). In reinforcement learning, sequential tasks are characterized as Markov Decisions Problems (MDPs), in which certain states are associated with rewards. Actions allow agents to transfer between states. An agent's goal is to maximize rewards in the long run, i.e., to learn an optimal mapping between states and actions, so as to choose the path that leads to the most rewards. Such an optimal policy is often achieved by learning values, which indicate for each action in each state, how much reward is expected when taking this action in this state. Model-free agents determine values by averaging over the past reward history following each state-action pair (Monte Carlo), similar to the behaviorist framework in psychology. Model-based agents, on the other hand, use an internal model of the environment to simulate action outcomes, similar to the cognitivist tradition.
 
-Bringing psychology and machine learning together, past research has shown that human and animal behavior can be modeled using reinforcement learning algorithms. A big success was the finding that activity in the brain's dopamine system coincided precisely with the occurrence of reward prediction errors, central components of reinforcement learning (Schultz, 1997). Much interest has also been in the differentiation of model-based and model-free reinforcement learning in animals and humans. Daw and colleagues (year) developed a behavioral task that aims at differentiating model-based and model-free components in humans, the "2-step task". Individuals differ in their propensities toward model-based or model-free decision making, but this balance is also situation-dependent. The balance tips toward model-free decision making, fast and with lower cognitive demands, during stress (Schwabe \& Wolf, 2011) or when multiple tasks are performed simultaneously (Otto, Gershman, Markman, \& Daw, 2013). However, it has not been shown how the balance could be tipped the other way, to increase model-based decisions. The only study that has achieved this---to the best of our knowledge---was a pharmacological manipulation of dopamine levels, rather than a cognitive manipulation (Wunderlich, Smittenaar, \& Dolan, 2012).
+Bringing psychology and machine learning together, past research has shown that human and animal behavior can be modeled using reinforcement learning algorithms. A big success was the finding that activity in the brain's dopamine system, sometimes called the brain's "reward system" (Wise, 1982), coincided precisely with the occurrence of reward prediction errors, central components of reinforcement learning (Schultz, 1997). Much interest has also been in the differentiation of model-based and model-free reinforcement learning in animals and humans. Daw and colleagues (year) developed a behavioral task that aims at differentiating model-based and model-free components in humans, the "2-step task". Individuals differ in their propensities toward model-based or model-free decision making, but this balance is also situation-dependent. The balance tips toward model-free decision making, fast and with lower cognitive demands, during stress (Schwabe \& Wolf, 2011) or when multiple tasks are performed simultaneously (Otto, Gershman, Markman, \& Daw, 2013). However, it has not been shown how the balance could be tipped the other way, to increase model-based decisions. The only study that has achieved this---to the best of our knowledge---was a pharmacological manipulation of dopamine levels, rather than a cognitive manipulation (Wunderlich, Smittenaar, \& Dolan, 2012).
 
 Where?? model-based: frontal cortex and dorsal striatum; model-free: subcortical regions and ventral striatum; Dolan \& Dayan, 2013
 
@@ -109,63 +111,61 @@ Participants' decision making strategies in the 2-step task can be analyzed in t
 
 Before the analyses, we cleaned the behavioral data, using standard procedures. We excluded trials, which were part of a streak in which participants pressed the same key more than 15 times in a row (the presentation side of the stimuli switched randomly). An average of 17.7 out of 180 trials was excluded per subject. We then excluded trials in which participants responded faster than 100 msec. An average 11.2 trials per subject was excluded. Whole blocks of data were excluded when participants selected the same first-stage stimulus in more than 95\% of trials, which would otherwise lead to problems with the statistical techniques (17 blocks were excluded). Finally, blocks were excluded in which more than 75\% of the data had been removed during cleaning (81 blocks). The resulting data contained 332 blocks from 109 participants.
 
-We first used the behavioral approach to analyze the data. We assessed participants' tendencies to repeat first-stage decisions after receiving rewards. As explained above, a model-free agent would repeat a rewarded action irrespective of whether it was followed by a common or rare transition. A model-based agent, on the other hand, would consider picking to other first-stage action after a rewarded rare transition because in this case, the probability of achieving the same outcome is higher when the opposite first-stage action is chosen. Figure 1 shows that the three groups of participants showed similar patterns of repeating first-stage actions. A sign of model-free reward sensitivity, participants repeated rewarded actions more often than unrewarded actions. This was reflected in a significant main effect of reward on staying (Figure 2), obtained through logistic, mixed-effects regression models using the package lme4 (cite) in R (cite). Participants also showed a feature of model-based decision making in that they differentiated between common and rare transitions. This was reflected in the interaction between reward and transition in the regression models (Figure 2).
+We first used the behavioral approach to analyze the data. We assessed participants' tendencies to repeat first-stage decisions after receiving rewards. As explained above, a model-free agent would repeat a rewarded action irrespective of whether it was followed by a common or rare transition. A model-based agent, on the other hand, would consider picking to other first-stage action after a rewarded rare transition because in this case, the probability of achieving the same outcome is higher when the opposite first-stage action is chosen. Figure \ref{Fig1} A shows that all three groups of participants tended to repeat rewarded actions more often than unrewarded actions, a sign of model-free behavior. This effect was statistically significant, as revealed by the main effect of reward on staying in most groups and runs (Figure \ref{Fig1} B), revealed by logistic, mixed-effects regression using the lme4 package (cite) in R (cite). Besides this model-free component, participants also showed model-based decision making in that they differentiated between common and rare transitions. This was reflected in the interaction between reward and transition in some of the regression models (Figure \ref{Fig1} B).
 
 \begin{figure}
 	\includegraphics[width=\linewidth]{Fig1ab.png}
-	\caption{Figure 1: bla.}
-	\label{basicSwitchStay}
+	\caption{bla.}
+	\label{Fig1}
 \end{figure}
 
-Participants did not differ between groups in terms of decision strategies. There were no interactions between reward and group, suggesting a difference in reward sensitivity, or between reward, transition, and group, suggesting a difference in the model-based aspect. 
+We next tested for differences in decision making between groups, but the regression models revealed no significant differences. There were no interactions at any time point between reward and group, which would have indicated differences in the model-free component (stats). Nor were there interactions between reward, transition, and group, which would have indicated differences in the model-based component (Run 1: group*reward, p = 0.55, ...). Lagged regression models (cite) and logistic regression model on the individual data supported this conclusion.
 
 \subsection{RL Modeling Analysis}
-We next used RL models to assess participant behavior. In the models, agents learned values for each of the six actions in the game (i.e., the six stimuli) and used these values to select actions, as follows:
+We next employed classical RL models to assess participants' decision process in more detail. In the models, agents chose actions $a$ based on internally-represented action values $Q$. Action values indicate how much reward an agent expects from choosing an action. In order to learn action values, agents observe the outcome of each trial (reward $R = 1$ or $R = 0$) and update the value $Q(s', a')$ of the selected second-stage action $a'$ in the second stage $s'$, in the following way:
 
 \begin{equation}
-P(a|s) = \frac{exp(\beta_{1} Q(s,a)}{\sum_{i} exp(\beta_{1} Q(s,a_{i}) + k K + p P)}
-\end{equation}
-
-Beta is the agent's individual softmax temperature, which regulates whether the agent will always choose the option with the higher value, or explore both actions more equally. Different values were allowed to select the first and second stimulus ($\beta1$ and $\beta2$). Explain keyrep and fracrep.
-
-In order to learn action values, agents observe the outcome of each trial (reward R = 1 or R = 0) and subsequently update the value V of the selected second-stage stimulus, in the following way:
-
-\begin{equation}
-Q(s_{t+1}, a_{t+1}) = Q(s_{t}, a_{t}) + \alpha_{2} RPE_{t},
+Q(s', a') = Q(s', a') + \alpha' * RPE,
 \end{equation}
 \begin{equation}
-RPE_{t} = r_{t} - Q(s_{t}, a_{t})
+RPE = R - Q(s', a')
 \end{equation}
 
-where $ \alpha_{2} $ is an agent's second-stage learning rate.
-
-Having updated the value of the second-stage stimulus, agents then update the values of first-stage actions. Model-free agents update the value of the selected first-stage action as follows:
+where $ \alpha' $ is an agent's learning rate, specific to learning of second-stage action values. Having updated the value $Q(s', a')$ of the selected second-stage action, agents then update the values $Q(s, a)$ of first-stage actions. Model-free agents do the following:
 
 \begin{equation}
-Q(s_{t+1}, a_{t+1}) = Q(s_{t}, a_{t}) + \alpha_{1} * (VPE_{t} + \lambda RPE_{t})
+Q_{mf}(s, a) = Q_{mf}(s, a) + \alpha * (VPE + \lambda * RPE)
 \end{equation}
 \begin{equation}
-VPE_{t} = Q2 - Q1
+VPE = Q(s', a') - Q_{mf}(s, a)
 \end{equation}
 
-The value of the first-stage stimulus depends on the reward prediction error (RPE) and a value prediction error (VPE), the difference between the value of the first and second selected action. lambda is a discounting factor for the RPE (the RPE only occurs after the second decision has been made).
+The value of the first-stage action depends on the reward prediction error (RPE) and a value prediction error (VPE), the difference between the value (i.e., expected reward) of the first action and the value of the received second state. The weight of the RPE for first-stage updating was determined by $ \lambda $, a temporal discounting factor. A model with $ \lambda = 0 $ was the best-fitting model for our participants, so only differences in values were taken into account in first-stage action updating, not rewards.
 
-The model-based agent, on the other hand, determines the values of first-stage action based on its internal model:
+Model-based agents determined the values of first-stage actions based on their internal predictive model, taking into account their known transition probabilities $p(s', a, s)$ between state $s$ and state $s'$, when choosing action $a$:
 
 \begin{equation}
-V1a(t) = common * max(V2a, V2b) + (1 - common) * max(V2c, V2d) 
-V1b(t) = (1 - common) * max(V2a, V2b) + common * max(V2c, V2d),
+Q_{mb}(s, a) = \sum_{s'} p(s', a, s) * max(Q(s', a'))
 \end{equation}
 
-where V2a and V2b is the pair of second-stage stimuli that usually follows the selection of the first-stage stimulus V1a; V2c and V2d are the second-stage pair that usually follows V1b. common is the probability of the common transition.
+Model-based agents therefore updated first-stage values by calculating the expected rewards from each action, given the transition probabilities between first and second states.
 
-Participants in this task were modeled as hybrid agents, combining model-based and model-free value estimates:
+We modeled participants as hybrid agents who combined model-based and model-free value estimates for first-stage actions:
 
 \begin{equation}
-Vhyb(t) = (1 - w) * Vmf + w * Vmb
+Q_{hyb}(s, a) = (1 - w) * Q_{mf}(s, a) + w * Q_{mb}(s, a)
 \end{equation}
 
-The parameter w therefore determines how much action values---and therefore actions---are determined by model-based and model-free value learning.
+The parameter $w$ determines the weight of model-based and model-free values to determine the value of the first-stage action, which the agent used to select the action.
+
+Agents selected actions $a$ and $a'$ in the following way, based on their action values $Q(s, a)$ and $Q(s', a')$:
+
+\begin{equation}
+P(a|s) = \frac{exp(\beta * Q(s, a) + k * K + p * P)}{\sum_{i} exp(\beta * Q(s, a_{i}) + k * K + p * P)}
+\end{equation}
+
+$\beta$ is the agent's individual softmax temperature. $\beta$ determines whether the agent will always choose the action with the highest value, or explore both actions more equally. Different values of $\beta$ were allowed for the first and second state ($\beta$ and $\beta'$). Besides action values, participants action selection was also determined by whether the same action was chosen in the previous trial ($P$) and whether the same key was pressed in the previous trial ($K$). The weight of these factors were determined by weights $p$ and $k$, which varied by agent. The model fit only improved with the inclusion of choice perseverance $P$, but not key perseverance $K$, 
+Explain keyrep and fracrep.
 
 We validated our model by simulating agents with different parameters, and subsequently recovering these parameters (data not shown). We also confirmed that reduced models, with certain parameters fixed, were best recovered by models with the same free parameters, rather than different models. 
 
