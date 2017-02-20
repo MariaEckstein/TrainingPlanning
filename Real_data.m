@@ -30,8 +30,10 @@ classdef Real_data < Dataset
             load([self.file_dir '/' file_name]);
             Agent = params.user.log;
             Agent(:, frac2_c) = Agent(:, frac2_c) - 2;   % stage-2 fractals are numbered 3-6 in the real data, but need to be 1-4 for my analysis
+            Agent(:, frac2_p) = Agent(:, frac2_p) - 2;   % same
             complete_data_rows = ~isnan(Agent(:, key1_c)) & ~isnan(Agent(:, key2_c)) & Agent(:, frac2_c) > 0;
-            Agent = Agent(complete_data_rows,:);
+            too_fast_trials = Agent(:, RT1_c) < 100;
+            Agent = Agent(complete_data_rows & ~too_fast_trials,:);
             if self.data_year == 2015
                 agentID =  file_name(8:9);
                 runID = 2 * str2num(file_name(10));   % reason for '2 *': participants only played 2-step twice, at the end of each session. that corresponds to runs 2 and 4 in the new data

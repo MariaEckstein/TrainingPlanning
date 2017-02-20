@@ -3,15 +3,10 @@ frac1_c = 4;
 frac2_c = 5;
 key1_c = 2;
 key2_c = 3;
+RT1_c = 7;
 reward_c = 10;
-% Qmf1_c = 7:8;
-% Qmf2_c = 9:12;
-% Qmb1_c = 13:14;
-% Qmb2_c = 15:18;
-% Q1_c = 19:20;
-% Q2_c = 21:24;
-% par_c = 25:(25 + n_params - 1);
-% AgentID_c = 1;
+frac1_p = 11:12;
+frac2_p = 13:14;
 
 %% All columns of exp.user.log
 % 1. trial number

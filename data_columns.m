@@ -13,3 +13,5 @@ Q1_c = 19:20;
 Q2_c = 21:24;
 n_params = 8;
 par_c = 25:(25 + n_params - 1);
+frac1_p = 35:36;
+frac2_p = 37:38;
