@@ -2,6 +2,9 @@
 GenrecAndData/
 old/
 Plots/
+RLDM/
 *.mat
 *.csv
 *.png
+*.pdf
+*.asv
