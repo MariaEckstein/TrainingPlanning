@@ -13,9 +13,9 @@ k_par = par(8) * 200 - 100;
 
 %%% Initial fractal values
 epsilon = .00001;
-Q1 = [.5 .5];   % initial values 2st-stage fractals
+Q1 = [.5 .5];   % Initial values 2st-stage fractals. [frac1 frac2] (according to fractal NAMES, not positions!!!)
 Qmf1 = [.5 .5];
-Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
+Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals. [frac1 frac2 frac3 frac4]
 Qmf2 = [.5 .5 .5 .5];
 
 %%% Data: Participant behavior (= sequence of choices)
@@ -36,42 +36,33 @@ frac2 = 123;
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
-    fractals1 = [1, 2];
-    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qb - Qa))
-    frac1 = Agent(t, frac1_c);
-    key1 = Agent(t, key1_c);
+    fractals1 = Agent(t, frac1_p);   % Which fractal is on the left, which is on the right?
+    prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % Prob of choosing frac on left and frac on right: 1 / (1 + e ** (beta * (Qb - Qa))
+    frac1 = Agent(t, frac1_c);   % Name of fractal chosen (1 or 2)
+    key1 = Agent(t, key1_c);   % Key used to choose fractal (1 = left; 2 = right)
 
     % Stage 2: Calculate likelihood of chosen actions
-    if any(Agent(t, frac2_c) == [1, 2])
-        fractals2 = [1, 2];
-    else
-        fractals2 = [3, 4];
-    end
+    fractals2 = Agent(t, frac2_p);
     prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);
-    frac2 = Agent(t, frac2_c);
-    key2 = Agent(t, key2_c);
+    frac2 = Agent(t, frac2_c);   % Name of fractal chosen (1 2 3 or 4)
+    key2 = Agent(t, key2_c);   % Key used to choose fractal (1 = left; 2 = right)
 
     % Check outcome of trial and update values for next trial
-    reward = Agent(t, reward_c);
+    reward = Agent(t, reward_c);   % 1 = reward; 0 = no reward
 
     % Model-free
-    Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);
-    Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);
+    Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);   % [Value frac1; value frac2] Model-free values of first-stage fractals
+    Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);   % [Value frac1; value frac2; value frac3; value frac4]
 
     % Model-based
-    [Qmb1, Qmb2] = MB_update(Qmf2, common);
+    Qmb1 = MB_update(Qmf2, common);
 
     % Combine model-free and model-based
-    Q1 = (1 - w) * Qmf1 + w * Qmb1;   % CHECK IF USUALLY COMBINED HERE OR AT PROBABILITIES!
+    Q1 = (1 - w) * Qmf1 + w * Qmb1;
     Q2 = Qmf2;
 
     % Get log of likelihoods of both choices and sum up
-    if any(frac2 == [1 3])
-        f2_index = 1;
-    else
-        f2_index = 2;
-    end
-    LL = LL + log(prob_frac2(f2_index)) + log(prob_frac1(frac1));
+    LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));
 
 end
 
