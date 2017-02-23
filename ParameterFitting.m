@@ -12,8 +12,6 @@ classdef ParameterFitting
         n_params
         n_fmincon_iterations
         solver_algo
-%         object_fun
-%         fit_params
     end
     
     methods

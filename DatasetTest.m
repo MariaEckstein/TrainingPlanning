@@ -222,9 +222,7 @@ classdef DatasetTest < matlab.unittest.TestCase
 
                 % Minimize neg. log. lik.
                 [fit_params, ~] = parameterFitting.minimize_NLL(Agent, sim_data, common);
-                minimized_parameters = fit_params(parameterFitting.fit_par == -1);
                 testCase.verifyTrue(all(fit_params >= zeros(1, n_params) & fit_params <= ones(1, n_params)))
-%                 testCase.verifyTrue(all(minimized_parameters > 0));
 
                 % Calculate BIC & AIC
                 NLLBICAIC = parameterFitting.compute_NLL(Agent, fit_params, sim_data, common);
