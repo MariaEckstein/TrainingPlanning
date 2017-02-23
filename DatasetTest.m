@@ -174,6 +174,7 @@ classdef DatasetTest < matlab.unittest.TestCase
             sim_data = 'load';
             sim_model = 'mb';
             fit_model = 'mb';
+            n_fit = 5;
             n_datasets = 5;
             n_trials = 5;
             n_params = 8;
@@ -190,8 +191,8 @@ classdef DatasetTest < matlab.unittest.TestCase
             testCase.verifyEqual(size(genrec.Data), genrec_size);
             
             % Save results to genrec
-            genrec.add_results(i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data);
-            genrec.add_results(i_dataset + 1, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data);
+            genrec.add_results(i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_fit);
+            genrec.add_results(i_dataset + 1, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_fit);
             testCase.verifyFalse(all(genrec.Data(i_dataset, :) == 0))
             testCase.verifyFalse(all(genrec.Data(i_dataset + 1, :) == 0))
             

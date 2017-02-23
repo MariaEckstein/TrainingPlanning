@@ -1,17 +1,9 @@
 function Data = simulate_task(n_agents, n_trials, par, common)
 
-%     n_agents = 5;
-%     n_trials = 5;
-%     par = [0.1, 0.4, 0.3, 0.3, 0.4, 0.5, 0.7, 0.2];
-%     load('list1.mat');
-%     fractal_rewards = x(5:8,:);
-%     common = 0.7;
-
 %% Initialize dataframe that will hold all agents' behavior
 Data = zeros(n_agents * n_trials, 25);
 n_params = length(par);
 data_columns;
-epsilon = 0.000001;
 
 %%% Find out which parameters are given and which should be free in each agent
 rand_par = par == -1;   % check which parameters should vary between agents
@@ -22,35 +14,19 @@ fractal_rewards = x(5:8,:);
 
 %% Simulate a bunch of agents
 for agent = 1:n_agents
+    initialize_par;   % Get initial values; parameters; and last trial's keys
+    
     a = (agent - 1) * n_trials + 1;   % get first row of this agent in Data
-    Q1 = [.5 .5];   % initial values 2st-stage fractals
-    Qmf1 = [.5 .5];
-    Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
-    Qmf2 = [.5 .5 .5 .5];
     Data(a, Q1_c) = Q1;
     Data(a, Q2_c) = Q2;
     Data(a:(a+n_trials-1), AgentID_c) = agent;   % agentID
 
     % Create an individual agent
     par(rand_par) = rand(1, sum(rand_par));   % draw random numbers for these parameters
-    alpha1 = par(1);
-    alpha2 = par(2);
-    beta1 = par(3) * 100;
-    beta2 = par(4) * 100;
-    lambda = par(5);
-    w = par(6);
-    p_par = par(7) * 20 - 10;
-    k_par = par(8) * 20 - 10;
     
     % Name the keys (1 = left; 2 = right)
     keys1 = [1 2];
     keys2 = [1 2 1 2];   % repeat, so that all 4 2nd-stage fractals can be accessed
-
-    % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
-    key1 = 123;
-    key2 = 123;
-    frac1 = 123;
-    frac2 = 123;
 
     % Let agent play the game
     for t = 1:n_trials

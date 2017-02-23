@@ -29,20 +29,21 @@ histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
 title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
-genrec = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
-genrec = sortrows(genrec, [agentID_c run_c]);   % sort by agentID and runID
-[n_agents, ~] = size(genrec);
-BIC = mean(genrec(:,NLLBICAIC_c(2)))   % get average BIC per agent
+genrec_dat = genrec.read_data;
+genrec_dat = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
+genrec_dat = sortrows(genrec_dat, [agentID_c run_c]);   % sort by agentID and runID
+[n_agents, ~] = size(genrec_dat);
+BIC = mean(genrec_dat(:,NLLBICAIC_c(2)))   % get average BIC per agent
 n_bins = 15;   % determine how fine-graned the histogram will be
 figure
 for i = 1:8   % plot parameters
     subplot(3, 3, i)
-    histogram(genrec(:, rec_aabblwpk_c(i)), n_bins)
+    histogram(genrec_dat(:, rec_aabblwpk_c(i)), n_bins)
     xlim([0 1])
     ylim([0 n_agents])
 end
 subplot(3, 3, 9)   % add BIC
-histogram(genrec(:,NLLBICAIC_c(2)), n_bins)
+histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
 ylim([0 n_agents])
 title(['av.BIC=' num2str(round(BIC))])
 

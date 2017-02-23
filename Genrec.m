@@ -14,7 +14,7 @@ classdef Genrec < handle
             obj.Data = zeros(n_datasets, 2 * n_params + 7);
         end
         
-        function add_results(self, i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data)
+        function add_results(self, i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_fit)
             data_columns;
             genrec_columns;   % what info is located in which column?
             self.Data(i_dataset, [agentID_c run_c]) = [agentID runID];
@@ -23,6 +23,7 @@ classdef Genrec < handle
             end
             self.Data(i_dataset, rec_aabblwpk_c) = fit_params;   % Save fitted parameters (params) into the genrec rec paramater columns (aabblwpk)
             self.Data(i_dataset, NLLBICAIC_c) = NLLBICAIC;   % Save NLL, BIC, and AIC (NLLBICAIC) into the genrec NLLBICAIC columns (NLLBICAIC_c)
+            self.Data(i_dataset, n_fit_c) = n_fit;
         end
         
         function save_data(self)
