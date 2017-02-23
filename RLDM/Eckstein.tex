@@ -71,21 +71,15 @@ Reinforcement Learning Model-based Model-free Decision Making
 \begin{itemize}
 	\item Add figure about 2-step task
 	\item Look at participants who did the training well
-	\item Look at AIC and BIC to find best model
 	\item Constrain p and k to reasonable limits
 	\item Simulate data using participants' parameter values -> recover
-	\item Find model with the best BIC
-	\item Check which model fits best for each session
-	\item Relation between task performance and mb/mf outcome?
-	\item Decide on \& make figures
-	\item (Learn how to) insert figures
 	\item Do some more research on mb / mf studies?
+	\item Look at AIC and BIC to find best model
 \end{itemize}
 
-At the very end:
+\section{Updates:}
 \begin{itemize}
-	\item Make equations pretty
-	\item Use BIBTeX to create citations
+	\item Model with lowest AIC and BIC: lambda == 0 -> use for analyses
 \end{itemize}
 
 \section{Introduction}
@@ -106,6 +100,12 @@ Based on these hypotheses, we pre-registered the study prior to data collection 
 \subsection{Study Design}
 
 We designed the following cognitive intervention based on our hypotheses: We asked 116 participants to take part in a two-session experiment, with the session taking place two days apart. We assessed participants' decision strategies using Daw et al.'s 2-step task at the beginning and end of each session, i.e., four times in total. Participants were randomly assigned to one of five groups. The control group engaged in the same two control tasks during the first and second session, a number comparison task (cite), and an orientation-discrimination task (cite). The model-based group (MB-MB) received the Tower of London task (cite) and a rule-based category task (Ashby \& Maddox) during both sessions and the model-free group (MF-MF) received an operant condition task (cite) and an information-integration category (cite) task in both sessions. The last two groups of participants were mixed: the MB-MF group received the tasks of the MB-MB group in the first session, and of the MF-MF group in the second session. The opposite was true for the MF-MB group. The analyses presented here focus on the first three 2-step assessments and collapse over the MB-MB and MB-MF groups, who had only received the model-based intervention up to that point. Likewise, we collapses over the MF-MF and MF-MB groups who had only engaged the model-free tasks yet.
+
+\begin{figure}
+	\includegraphics[width=0.5\linewidth]{TwoStepTask.png}
+	\caption{bla.}
+	\label{TwoStep}
+\end{figure}
 
 In each trial of the 2-step task, with which we assessed model-based and model-free behavior, participants select one of two stimuli in the first stage (e.g., blue vs green). Depending on the selected stimulus (e.g., green), participants are then presented with a second binary decision (e.g., red vs yellow stimulus). The second choice determines whether participants are rewarded or not. Each stimulus in the second stage is associated with a certain, independent reward probability (which slowly changes over time). Crucially, the link between first-stage choice and second-stage pair is probabilistic, rather than deterministic. In our example, selecting the green stimulus in the first stage would lead to the read-vs-yellow stage in 70\% of cases, but to a different, e.g., pink-vs-purple stage in 30\% of the trials. The opposite would be true for the blue stimulus in the first stage.
 
