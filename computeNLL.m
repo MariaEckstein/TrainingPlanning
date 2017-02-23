@@ -49,8 +49,8 @@ end
 
 % Take negative of LL to get negative log likelihood; calculate BIC and AIC
 NLL = -LL;
-BIC = 2 * NLL + n_fit * log(2 * n_trials);
-AIC = 2 * NLL + 2 * n_fit;
+BIC = 2 * NLL + n_fit * log(2 * n_trials);   % {BIC} ={\ln(n)k-2\ln({\hat {L}})}.\ }
+AIC = 2 * NLL + n_fit * 2;  % {AIC} =2k-2\ln({\hat {L}})}
 
 if strcmp(output, 'NLL')
     result = NLL;

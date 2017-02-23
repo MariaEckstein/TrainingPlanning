@@ -381,11 +381,6 @@ if (ggsave_figures) {
 }
 ```
 
-```{r, echo = F, warning = F, fig.cap = "Changes over time: Within-participant differences between Run 1 and Runs 2 and 3."}
-
-
-```
-
 ## Stats: Logistic regression (switch_stay ~ reward * transition)
 
 ```{r, echo = F, fig.cap = "Logistic regression: Stay ~ 1 + reward * transition"}
@@ -929,7 +924,7 @@ gg_manipcheck
 
 ### Read in data frames for all combinations of parameters
 # ts_colnames = c("a1", "a2", "b1", "b2", "l", "p", "k", "w", "BIC", "SubjID", "session", "run", "f")
-ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")
+ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")#, "n_fit"
 ts_params = data.frame(t(ts_colnames))[0,]
 colnames(ts_params) = ts_colnames
 
@@ -939,7 +934,7 @@ for (file_name in file_names) {
   par_file = as.data.frame(readMat(file.path(model_dir, file_name)))[,c(1, 19, 10:17, 20:22)]
   colnames(par_file) = ts_colnames
   # Add model name (params) and number of parameters (num_par)
-  params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim.mat")[[1]][1]
+  params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim.*.mat")[[1]][1]
   num_par = 0   # can't count how many parameters because some are 0, some 1, some 0.5... would have to check for parameters with sd == 0 to make it work
   session = paste("Session", ifelse(par_file$run %in% c(1, 2), 1, 2))
   par_file = cbind(par_file, params, num_par, session)
@@ -949,6 +944,10 @@ for (file_name in file_names) {
 ts_params = subset(ts_params, run %in% 1:4)
 ts_params$run = paste("Run", ts_params$run)
 ts_params$run = factor(ts_params$run)
+ts_params$num_par[ts_params$params == "hyb"] = 8
+ts_params$num_par[ts_params$params == "mf"] = ts_params$num_par[ts_params$params == "l0"] = ts_params$num_par[ts_params$params == "l1"] = ts_params$num_par[ts_params$params == "nop"] = ts_params$num_par[ts_params$params == "nok"] = ts_params$num_par[ts_params$params == "b20"] = 7
+ts_params$num_par[ts_params$params == "a1b1"] = ts_params$num_par[ts_params$params == "nopk"] = 6
+ts_params$num_par[ts_params$params == "mb"] = 5
 
 ### Exclude bad subjects
 if (do_exclude_trials) {
@@ -959,20 +958,19 @@ if (do_exclude_trials) {
   ts_params$few_trials = NULL
   
   # Exclude data sets with abnormal BICs
-  ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)))
+  ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)) & !SubjID == 106)
 }
 
 summary(ts_params)
 
 ### Normalize parameters (part accidentally deleted - necssary for old data)
 ts_params = add_group_columns(ts_params)
-ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC"))
-colnames(ts_params_molten) = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "parameter", "estimate")
+ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "AIC"))
+colnames(ts_params_molten) = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "AIC", "parameter", "estimate")
 ts_params_molten$parameter = as.factor(ts_params_molten$parameter)
 ts_params_molten$estimate  = as.numeric(as.character(ts_params_molten$estimate))
 ts_params_molten$params    = as.factor(ts_params_molten$params)
 ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
-# mean_params = ddply(ts_params_molten, .(parameter, params), summarize, mean_estimate = mean(estimate, na.rm = T))
 ```
 
 #### Which model is the best?
@@ -989,8 +987,16 @@ gg_model_BIC = ggplot(subset(ts_params_molten, parameter == "a1"), aes(params, B
   labs(x = "", color = "# of params")
 gg_model_BIC
 
+gg_model_AIC = gg_model_BIC + aes(params, AIC, group = 1)
+gg_model_AIC
+
+gg_BIC_AIC = ggplot(subset(ts_params_molten, parameter == "a1" & SubjID == 110), aes(BIC, AIC, color = num_par)) +
+  geom_point() +
+  facet_wrap(~ run)
+gg_BIC_AIC
+
 # Prepare relative BICs
-rel_BIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter)),
+rel_BIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter, AIC)),
                   idvar = c("SubjID", "session", "run", "training", "training_s1"), timevar = "params", direction = "wide")
 rel_BIC$nop = with(rel_BIC, BIC.nop - BIC.hyb)
 rel_BIC$nok = with(rel_BIC, BIC.nok - BIC.hyb)
@@ -1000,14 +1006,31 @@ rel_BIC$mf = with(rel_BIC, BIC.mf - BIC.hyb)
 rel_BIC$a1b1 = with(rel_BIC, BIC.a1b1 - BIC.hyb)
 rel_BIC$l0 = with(rel_BIC, BIC.l0 - BIC.hyb)
 rel_BIC$l1 = with(rel_BIC, BIC.l1 - BIC.hyb)
-rel_BIC$nok_mb = with(rel_BIC, BIC.nok_mb - BIC.hyb)
-rel_BIC$nok_mf = with(rel_BIC, BIC.nok_mf - BIC.hyb)
-rel_BIC$nok_l0 = with(rel_BIC, BIC.nok_l0 - BIC.hyb)
-rel_BIC$nok_l1 = with(rel_BIC, BIC.nok_l1 - BIC.hyb)
-rel_BIC$a1b1_nok = with(rel_BIC, BIC.a1b1_nok - BIC.hyb)
+rel_BIC$b20 = with(rel_BIC, BIC.b20 - BIC.hyb)
 summary(rel_BIC)
-rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1_nok, BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok_l0, BIC.nok_l1, BIC.nok_mb, BIC.nok_mf, BIC.nok, BIC.nop, BIC.nopk)),
+rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok, BIC.nop, BIC.nopk, BIC.b20)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
+
+rel_AIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter, BIC)),
+                  idvar = c("SubjID", "session", "run", "training", "training_s1"), timevar = "params", direction = "wide")
+rel_AIC$nop = with(rel_AIC, AIC.nop - AIC.hyb)
+rel_AIC$nok = with(rel_AIC, AIC.nok - AIC.hyb)
+rel_AIC$nokp = with(rel_AIC, AIC.nopk - AIC.hyb)
+rel_AIC$mb = with(rel_AIC, AIC.mb - AIC.hyb)
+rel_AIC$mf = with(rel_AIC, AIC.mf - AIC.hyb)
+rel_AIC$a1b1 = with(rel_AIC, AIC.a1b1 - AIC.hyb)
+rel_AIC$l0 = with(rel_AIC, AIC.l0 - AIC.hyb)
+rel_AIC$l1 = with(rel_AIC, AIC.l1 - AIC.hyb)
+rel_AIC$b20 = with(rel_AIC, AIC.b20 - AIC.hyb)
+summary(rel_AIC)
+rel_AIC_molten = melt(subset(rel_AIC, select = -c(AIC.a1b1, AIC.hyb, AIC.l0, AIC.l1, AIC.mb, AIC.mf, AIC.nok, AIC.nop, AIC.nopk, AIC.b20)),
+                      id.vars = c("SubjID", "session", "run", "training", "training_s1"))
+
+rel_BIC_AIC = merge(rel_BIC_molten, rel_AIC_molten, by = c("SubjID", "run", "session", "training", "training_s1", "variable"), suff = c("_BIC", "_AIC"))
+
+gg_rel_BIC_AIC = ggplot(rel_BIC_AIC, aes(value_BIC, value_AIC)) +
+  geom_point()
+gg_rel_BIC_AIC
 
 # Plot relative BICs
 gg_rel_BIC = ggplot(subset(rel_BIC_molten, run != "Run 4"), aes(variable, value), group = SubjID) +
@@ -1016,6 +1039,13 @@ gg_rel_BIC = ggplot(subset(rel_BIC_molten, run != "Run 4"), aes(variable, value)
   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", color = "red") +
   labs(x = "", y = "model BIC - hyb BIC")
 gg_rel_BIC
+
+gg_rel_AIC = ggplot(subset(rel_AIC_molten, run != "Run 4"), aes(variable, value), group = SubjID) +
+  geom_hline(yintercept = 0) +
+  geom_point(position = "jitter", alpha = 0.2) +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange", color = "red") +
+  labs(x = "", y = "model AIC - hyb AIC")
+gg_rel_AIC
 
 gg_rel_BIC_run = gg_rel_BIC +
   facet_grid(~ run)
@@ -1027,54 +1057,48 @@ if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_rel_BIC_run.png"), gg_rel_BIC_run, width = 15, height = 10)
 }
 
-# Stats
-## nok
-nok_total = sum(!is.na(rel_BIC$nok))
-nok_better = sum(rel_BIC$nok > 0, na.rm = T)
-# binom.test(nok_better, nok_total)   # ***
+# BIC stats
 ## mb
 mb_total = sum(!is.na(rel_BIC$mb))
-mb_better = sum(rel_BIC$mb > 0, na.rm = T)
-# binom.test(mb_better, mb_total)   # ***
+mb_better = sum(rel_BIC$mb < 0, na.rm = T)
+binom.test(mb_better, mb_total)   # ***
 ## mf
 mf_total = sum(!is.na(rel_BIC$mf))
-mf_better = sum(rel_BIC$mf > 0, na.rm = T)
-# binom.test(mf_better, mf_total)   # ***
+mf_better = sum(rel_BIC$mf < 0, na.rm = T)
+binom.test(mf_better, mf_total)   # ***
 ## l0
 l0_total = sum(!is.na(rel_BIC$l0))
-l0_better = sum(rel_BIC$l0 > 0, na.rm = T)
-# binom.test(l0_better, l0_total)   # ***
+l0_better = sum(rel_BIC$l0 < 0, na.rm = T)
+binom.test(l0_better, l0_total)   # ***
 ## l1
 l1_total = sum(!is.na(rel_BIC$l1))
-l1_better = sum(rel_BIC$l1 > 0, na.rm = T)
-# binom.test(l1_better, l1_total)   # ***
-## nok_mb
-nok_mb_total = sum(!is.na(rel_BIC$nok_mb))
-nok_mb_better = sum(rel_BIC$nok_mb > 0, na.rm = T)
-# binom.test(nok_mb_better, nok_mb_total)   # ***
-## nok_mf
-nok_mf_total = sum(!is.na(rel_BIC$nok_mf))
-nok_mf_better = sum(rel_BIC$nok_mf > 0, na.rm = T)
-# binom.test(nok_mf_better, nok_mf_total)   # ***
-## nok_l0
-nok_l0_total = sum(!is.na(rel_BIC$nok_l0))
-nok_l0_better = sum(rel_BIC$nok_l0 > 0, na.rm = T)
-binom.test(nok_l0_better, nok_l0_total)   # ***
-## nok_l1
-nok_l1_total = sum(!is.na(rel_BIC$nok_l1))
-nok_l1_better = sum(rel_BIC$nok_l1 > 0, na.rm = T)
-binom.test(nok_l1_better, nok_l1_total)   # ***
-## nok_l1 > nok_l0
-nok_l1_total = sum(!is.na(rel_BIC$nok_l0 - rel_BIC$nok_l1))
-nok_l1_better = sum((rel_BIC$nok_l0 - rel_BIC$nok_l1) > 0, na.rm = T)
-binom.test(nok_l1_better, nok_l1_total)   # * (p = 0.01635)
+l1_better = sum(rel_BIC$l1 < 0, na.rm = T)
+binom.test(l1_better, l1_total)   # ***
+## l1 > l0
+l1_total = sum(!is.na(rel_BIC$l0 - rel_BIC$l1))
+l1_better = sum((rel_BIC$l0 - rel_BIC$l1) > 0, na.rm = T)
+binom.test(l1_better, l1_total)   # * (p = 0.001017)
+
+# AIC stats
+## mf
+mf_total = sum(!is.na(rel_AIC$mf))
+mf_better = sum(rel_AIC$mf < 0, na.rm = T)
+binom.test(mf_better, mf_total)   # ***
+## l0
+l0_total = sum(!is.na(rel_AIC$l0))
+l0_better = sum(rel_AIC$l0 < 0, na.rm = T)
+binom.test(l0_better, l0_total)   # p = 0.1671
+## l1
+l1_total = sum(!is.na(rel_AIC$l1))
+l1_better = sum(rel_AIC$l1 < 0, na.rm = T)
+binom.test(l1_better, l1_total)   # ***
 ```
 
 
 ```{r, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
 # Add training column
-selected_parameter_dat = subset(ts_params_molten, params == "nok_l1" & parameter %in% c("a1", "a2", "b1", "b2", "p", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
+selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "l", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
 
 ### Plot
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
