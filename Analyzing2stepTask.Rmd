@@ -50,7 +50,7 @@ After completing the experiment, some subjects reported that they had explored t
             ##                                  ##
             ######################################
 
-data_source = "2016from_scratch"        # can be either 'empirical' (2015 data) or 'simulations' or 2016 (2016 data) or '2016from_scratch' (data from Berkeley XLab)?
+data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 ggsave_figures = T                      # Save figures as pngs onto the computer?
 preprocess_data = F
@@ -1000,7 +1000,6 @@ rel_BIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_pa
                   idvar = c("SubjID", "session", "run", "training", "training_s1"), timevar = "params", direction = "wide")
 rel_BIC$nop = with(rel_BIC, BIC.nop - BIC.hyb)
 rel_BIC$nok = with(rel_BIC, BIC.nok - BIC.hyb)
-rel_BIC$nokp = with(rel_BIC, BIC.nopk - BIC.hyb)
 rel_BIC$mb = with(rel_BIC, BIC.mb - BIC.hyb)
 rel_BIC$mf = with(rel_BIC, BIC.mf - BIC.hyb)
 rel_BIC$a1b1 = with(rel_BIC, BIC.a1b1 - BIC.hyb)
@@ -1008,14 +1007,13 @@ rel_BIC$l0 = with(rel_BIC, BIC.l0 - BIC.hyb)
 rel_BIC$l1 = with(rel_BIC, BIC.l1 - BIC.hyb)
 rel_BIC$b20 = with(rel_BIC, BIC.b20 - BIC.hyb)
 summary(rel_BIC)
-rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok, BIC.nop, BIC.nopk, BIC.b20)),
+rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok, BIC.nop, BIC.b20)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
 
 rel_AIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter, BIC)),
                   idvar = c("SubjID", "session", "run", "training", "training_s1"), timevar = "params", direction = "wide")
 rel_AIC$nop = with(rel_AIC, AIC.nop - AIC.hyb)
 rel_AIC$nok = with(rel_AIC, AIC.nok - AIC.hyb)
-rel_AIC$nokp = with(rel_AIC, AIC.nopk - AIC.hyb)
 rel_AIC$mb = with(rel_AIC, AIC.mb - AIC.hyb)
 rel_AIC$mf = with(rel_AIC, AIC.mf - AIC.hyb)
 rel_AIC$a1b1 = with(rel_AIC, AIC.a1b1 - AIC.hyb)
@@ -1023,7 +1021,7 @@ rel_AIC$l0 = with(rel_AIC, AIC.l0 - AIC.hyb)
 rel_AIC$l1 = with(rel_AIC, AIC.l1 - AIC.hyb)
 rel_AIC$b20 = with(rel_AIC, AIC.b20 - AIC.hyb)
 summary(rel_AIC)
-rel_AIC_molten = melt(subset(rel_AIC, select = -c(AIC.a1b1, AIC.hyb, AIC.l0, AIC.l1, AIC.mb, AIC.mf, AIC.nok, AIC.nop, AIC.nopk, AIC.b20)),
+rel_AIC_molten = melt(subset(rel_AIC, select = -c(AIC.a1b1, AIC.hyb, AIC.l0, AIC.l1, AIC.mb, AIC.mf, AIC.nok, AIC.nop, AIC.b20)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
 
 rel_BIC_AIC = merge(rel_BIC_molten, rel_AIC_molten, by = c("SubjID", "run", "session", "training", "training_s1", "variable"), suff = c("_BIC", "_AIC"))
@@ -1098,7 +1096,7 @@ binom.test(l1_better, l1_total)   # ***
 ```{r, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
 # Add training column
-selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "l", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
+selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
 
 ### Plot
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")

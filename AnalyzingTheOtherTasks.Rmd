@@ -5,17 +5,21 @@ date: "June 26, 2015"
 output: pdf_document
 ---
 
-# PART 1: Goals of the study (in the other document)
-
-
-# PART 2: Statistical Analyses
-
 ## Prepare R and R.packages
+
 ```{r, echo = F, results = F, warning = F, message = F}
-setwd("C:/Users/maria/MEGAsync/GSN/Wunderlich Lab/TrainingPlanningProject")
-source("TP_functions.R")
-library("ggplot2"); library("gridExtra"); library("nlme"); library("reshape"); library("plyr")
-theme_set(theme_bw())   #make ggplot theme_bw()
+
+data_source = "2016"
+do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
+ggsave_figures = T                      # Save figures as pngs onto the computer?
+preprocess_data = T
+home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
+figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
+data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
+model_dir = file.path(home_dir, "TwoStepTask/model")
+
+source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
+library("reshape"); library("R.matlab"); library("car"); library("zoo"); library("lme4"); library("lmerTest"); library("ggplot2"); theme_set(theme_bw()); library("gridExtra")
 ```
 
 ## Prepare and clean the data
@@ -28,11 +32,24 @@ theme_set(theme_bw())   #make ggplot theme_bw()
 + Save resulting data as .csv
 
 ```{r, echo = F, warning = F}
-ToL = read_in_ToL()
+ToL = read.table("auswertung_alle.txt",
+           header = T,
+           sep = " ", na.strings = "",
+           colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
+
+ToL[ToL$SubjID %in% as.character(seq(100,250)),]
+
+ToL$run = substr(ToL$SubjID, 4, 4)
+ToL$run = factor(ToL$run, labels = paste("Run", 1:4))
+ToL$SubjID = substr(ToL$SubjID, 1, 3)
+
+ToL$session = ToL$TaskVersion = NULL
+  
 ToL = add_performance_columns_ToL()
 ToL = add_group_columns(data = ToL)
-# summary(ToL)
-write.table(ToL, file = "TowerOfLondonTask/auswertung_completed.csv", quote = F, sep = ",", row.names = F)
+plot(ToL$MadeMoves)   # Double-checked large numbers of moves in the raw data - everything matches up fine! 
+summary(ToL)
+write.table(ToL, file = "ToL_data.csv", quote = F, sep = ",", row.names = F)
 ```
 
 ### Category learning, Food, Orientation discrimination, Number comparison:
@@ -83,8 +100,6 @@ ts_params = add_group_columns(ts_params)
 # summary(ts_params)
 ```
 
-## Was the training effective? (in the other script)
-...
 
 ## Is training performance an additional predictor of how subjects solve the 2-step Task?
 
@@ -111,17 +126,17 @@ Both measures are plausible as measures of ToL performance and vary between subj
 
 ```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
 # Difference between estimated and executed moves
-MadeEstimPlot = plot_ToL_perf(data = ToL, variable = "Made_minus_EstimMoves",
-                              title = "Difference made - estimated",
-                              ylab = "How many more moves were made than estimated?")
+MadeEstimPlot = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
+  geom_boxplot() +
+  labs(x = "Subject ID", y = "Made moves - estimated moves") +
+  facet_wrap(~ run)
+MadeEstimPlot
 
-# Difference between the minimum possible number of moves and made moves
-MadeMinPlot = plot_ToL_perf(data = ToL, variable = "Made_minus_MinMoves",
-                            title = "Extra moves",
-                            ylab = "How many more moves were made than necessary?")
-
-## Plot both
-grid.arrange(MadeEstimPlot, MadeMinPlot, nrow = 2)
+MadeMinPlot = ggplot(ToL, aes(SubjID, Made_minus_MinMoves)) +
+  geom_boxplot() +
+  labs(x = "Subject ID", y = "Made moves - min moves") +
+  facet_wrap(~ run)
+MadeMinPlot
 ```
 ```{r, echo = F, eval = F}
 ## Also of interest?
@@ -130,6 +145,7 @@ ggplot(ToL, aes(MinMoves, MadeMoves, color = SubjID)) +
   geom_point(position = "jitter") +
   geom_abline(intercept = 0, slope = 1) +
   coord_cartesian(xlim = c(0, 20), ylim = c(0, 20))
+
 # Usually, more moves are needed than previously estimated
 ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
   geom_point(position = "jitter") +
@@ -141,13 +157,9 @@ ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
     This indicates how much effect the training had at all on the subjects. Here is the difference in the performance measures above between the first and second run of the Tower of London.
     
 ```{r, echo = F, warning = F, fig.height = 4.5, fig.width = 9}
-# detach("package:Hmisc", unload = T)
-detach("package:ggplot2", unload = T)
 M_based = create_summary_data_frames()[[1]]
 M_free  = create_summary_data_frames()[[2]]
 
-library(ggplot2)
-theme_set(theme_bw())
 plot_ToL_diffscores()
 ```
 
@@ -170,6 +182,7 @@ tsTotalACCPlot
 tsTotalRTPlot = plot_ts_perf_total(variable = "RT")
 tsTotalRTPlot
 ```
+
 3. ***How much did their performance change over the course of the training?***  
    That is, ... .
    

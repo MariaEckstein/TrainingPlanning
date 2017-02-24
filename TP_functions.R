@@ -1,66 +1,24 @@
-###############
-### General ###
-###############
-
-calculate_r_from_t = function(t, df) {
-  r <- sqrt((t^2) / (t^2 + df))
-  d <- (t * 2) / sqrt(df)
-  return(r)
-}
 
 ####################
 ### Read in data ###
 ####################
 
-read_in_and_combine_several_files = function(file_dir, output_dir, column_headers, output_file_name) {
-
-  file_names = list.files(file_dir, pattern = "*.csv")
-  
-  all_files = column_headers
-  
-  for (file_name in file_names) {
-    
-    file = vector()
-    file = read.csv(file = file.path(file_dir, file_name), header = F, col.names = column_headers)
-    
-    all_files = rbind(all_files, file)
-  }
-  
-  all_files = all_files[2:nrow(all_files),]
-  
-  write.csv(all_files, paste(output_dir, output_file_name, sep = ""))
-}
-
-# file_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject/TwoStepTask/Results/simulated_data/"
-# output_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject/TwoStepTask/Results/simulated_data/"
-# column_headers = paste("c", 1:18, sep = "")
-# output_file_name = "all_simulations.csv"
-# read_in_and_combine_several_files(file_dir, output_dir, column_headers, output_file_name)
-# 
-# file_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject/TwoStepTask/Results/all/k_can_be_negative/"
-# output_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject/TwoStepTask/Results/all/k_can_be_negative/"
-# column_headers = paste("c", 1:15, sep = "")
-# output_file_name = "parameter_data_ga_fmincon_abpkw.csv"
-# 
-# column_headers = c("alpha1", "alpha2", "beta1", "beta2", "lambda", "p", "k", "w", "BIC", "SubjID", "session", "run", "functionvalue")
-# output_file_name = "parameter_data_ga_fmincon.csv"
-  
 
 ### ToL ###
 
-read_in_ToL = function() {
-  
-  dat = read.table("TowerOfLondonTask/auswertung_alle.txt",
-             header = T,
-             sep = " ", na.strings = "",
-             colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
-  
-  dat$run     = factor(dat$run, levels = unique(dat$run), labels = paste("Run", unique(dat$run)))
-  dat$session = factor(dat$session, levels = unique(dat$session), labels = paste("Session", unique(dat$session)))
-  
-  dat[dat$SubjID %in% as.character(seq(10,100)),]
-  
-}
+# read_in_ToL = function() {
+#   
+#   dat = read.table("auswertung_alle.txt",
+#              header = T,
+#              sep = " ", na.strings = "",
+#              colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
+#   
+#   dat$run     = factor(dat$run, levels = unique(dat$run), labels = paste("Run", unique(dat$run)))
+#   dat$session = factor(dat$session, levels = unique(dat$session), labels = paste("Session", unique(dat$session)))
+#   
+#   dat[dat$SubjID %in% as.character(seq(10,100)),]
+#   
+# }
 
 ### Lab & Ass ###
 
@@ -560,20 +518,31 @@ add_performance_columns_ToL = function() {
   ## Add column MinMoves: minimum number of moves necessary to solve each tower problem
   ToL$MinMoves = NA
   
-  ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT000201"] = 3
-  ToL$MinMoves[ToL$StartTower == "ST012000" & ToL$GoalTower == "GT100011"] = 3
+  ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT000201"] = 3#
+  ToL$MinMoves[ToL$StartTower == "ST012000" & ToL$GoalTower == "GT100011"] = 3#
+  ToL$MinMoves[ToL$StartTower == "ST111020" & ToL$GoalTower == "GT000102"] = 3#
+  ToL$MinMoves[ToL$StartTower == "ST010010" & ToL$GoalTower == "GT001110"] = 3#
   
-  ToL$MinMoves[ToL$StartTower == "ST000110" & ToL$GoalTower == "GT111000"] = 4
-  ToL$MinMoves[ToL$StartTower == "ST200001" & ToL$GoalTower == "GT102000"] = 4
+  ToL$MinMoves[ToL$StartTower == "ST000110" & ToL$GoalTower == "GT111000"] = 4#
+  ToL$MinMoves[ToL$StartTower == "ST200001" & ToL$GoalTower == "GT102000"] = 4#
+  ToL$MinMoves[ToL$StartTower == "ST002010" & ToL$GoalTower == "GT201011"] = 4#
+  ToL$MinMoves[ToL$StartTower == "ST001001" & ToL$GoalTower == "GT201110"] = 4#
   
-  ToL$MinMoves[ToL$StartTower == "ST101100" & ToL$GoalTower == "GT110010"] = 5
-  ToL$MinMoves[ToL$StartTower == "ST001020" & ToL$GoalTower == "GT102000"] = 5
   
-  ToL$MinMoves[ToL$StartTower == "ST100100" & ToL$GoalTower == "GT110010"] = 6
-  ToL$MinMoves[ToL$StartTower == "ST002001" & ToL$GoalTower == "GT020100"] = 6
+  ToL$MinMoves[ToL$StartTower == "ST101100" & ToL$GoalTower == "GT110010"] = 5#
+  ToL$MinMoves[ToL$StartTower == "ST001020" & ToL$GoalTower == "GT102000"] = 5#
+  ToL$MinMoves[ToL$StartTower == "ST000120" & ToL$GoalTower == "GT200001"] = 5#
+  ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT201011"] = 5#
   
-  ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT100100"] = 7
-  ToL$MinMoves[ToL$StartTower == "ST000102" & ToL$GoalTower == "GT100011"] = 7
+  ToL$MinMoves[ToL$StartTower == "ST100100" & ToL$GoalTower == "GT110010"] = 6#
+  ToL$MinMoves[ToL$StartTower == "ST002001" & ToL$GoalTower == "GT020100"] = 6#
+  ToL$MinMoves[ToL$StartTower == "ST000120" & ToL$GoalTower == "GT020001"] = 6#
+  ToL$MinMoves[ToL$StartTower == "ST100100" & ToL$GoalTower == "GT000201"] = 6#
+  
+  ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT100100"] = 7#
+  ToL$MinMoves[ToL$StartTower == "ST000102" & ToL$GoalTower == "GT100011"] = 7#
+  ToL$MinMoves[ToL$StartTower == "ST002001" & ToL$GoalTower == "GT101100"] = 7#
+  ToL$MinMoves[ToL$StartTower == "ST102011" & ToL$GoalTower == "GT000110"] = 7#
   
   ToL$MinMoves[ToL$StartTower == "ST112010" & ToL$GoalTower == "GT020100"] = 8
   ToL$MinMoves[ToL$StartTower == "ST000102" & ToL$GoalTower == "GT102011"] = 8
