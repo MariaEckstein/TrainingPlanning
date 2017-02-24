@@ -5,37 +5,32 @@ date: "June 26, 2015"
 output: pdf_document
 ---
 
-## Prepare R and R.packages
-
-```{r, echo = F, results = F, warning = F, message = F}
-
+```{r Load packages, echo = F, results = F, warning = F, message = F}
 data_source = "2016"
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 ggsave_figures = T                      # Save figures as pngs onto the computer?
 preprocess_data = T
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
-data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
-model_dir = file.path(home_dir, "TwoStepTask/model")
+data_dir = file.path(home_dir, "allResults/XlabData2016")
+# model_dir = file.path(home_dir, "TwoStepTask/model")
 
 source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
-library("reshape"); library("R.matlab"); library("car"); library("zoo"); library("lme4"); library("lmerTest"); library("ggplot2"); theme_set(theme_bw()); library("gridExtra")
+library("reshape"); library("R.matlab"); library("car"); library("zoo"); library("plyr"); library("lme4"); library("lmerTest"); library("ggplot2"); theme_set(theme_bw()); library("gridExtra")
 ```
 
-## Prepare and clean the data
-
-### Tower of London:
+# Tower of London
 
 + Read in data set as `ToL` and set `numeric` and `factor` columns
 + Add column with minimum number of possible moves
 + Add columns indicating the subject `group` (model-free training session: `m_free`; model-based training session: `m_based`)
 + Save resulting data as .csv
 
-```{r, echo = F, warning = F}
+```{r Prepare data, echo = F, warning = F}
 ToL = read.table("auswertung_alle.txt",
-           header = T,
-           sep = " ", na.strings = "",
-           colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
+                 header = T,
+                 sep = " ", na.strings = "",
+                 colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
 
 ToL[ToL$SubjID %in% as.character(seq(100,250)),]
 
@@ -51,12 +46,39 @@ plot(ToL$MadeMoves)   # Double-checked large numbers of moves in the raw data - 
 summary(ToL)
 write.table(ToL, file = "ToL_data.csv", quote = F, sep = ",", row.names = F)
 ```
+```{r Plot made moves - min & estim moves ~ SubjID, echo = F, warning = F, fig.height = 9, fig.width = 9}
+# Difference between estimated and executed moves
+gg_made_estim = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
+  geom_boxplot() +
+  labs(x = "Subject ID", y = "Made moves - estimated moves") +
+  facet_wrap(~ run)
+gg_made_estim
 
-### Category learning, Food, Orientation discrimination, Number comparison:
+gg_made_min = ggplot(ToL, aes(SubjID, Made_minus_MinMoves)) +
+  geom_boxplot() +
+  labs(x = "Subject ID", y = "Made moves - min moves") +
+  facet_wrap(~ run)
+gg_made_min
+```
+```{r Plot made moves ~ min moves, echo = F, eval = F}
+## Also of interest?
+# The more moves are necessary minimally, the more the deviation in the executed moves
+gg_min_spread = ggplot(ToL, aes(MinMoves, MadeMoves, color = SubjID)) +
+  geom_point(position = "jitter") +
+  geom_abline(intercept = 0, slope = 1) +
+  coord_cartesian(xlim = c(0, 20), ylim = c(0, 20))
+gg_min_spread
 
-#### Reward probabilities in the Food task
+# Usually, more moves are needed than previously estimated
+gg_estim_spread = ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
+  geom_point(position = "jitter") +
+  geom_abline(intercept = 0, slope = 1) +
+  coord_cartesian(xlim = c(0, 25), ylim = c(0, 25))
+```
 
-```{r, echo = F, warning = F, message = F}
+# Food task
+
+```{r Theoretical reward probabilities, echo = F, warning = F, message = F}
 prob_of_rewards = expand.grid(number_of_rewards = 0:8, rew_prob = seq(0.1, 0.3, 0.05), probability = NA, cum_probability = NA)
 prob_of_rewards$rew_prob = factor(prob_of_rewards$rew_prob)
 
@@ -81,6 +103,187 @@ ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = re
   labs(x = "Number of rewards (trial)", y = "Cumulative probability (%)", color = "Rew. prob. / int.")
 
 ```
+```{r Read in data and summarize by trials, echo = F, warning = F, message = F}
+
+if (preprocess_data) {
+  col_names = c("SubjID", "run", "trial", "rew_avail", "rew_rec", "n_cor", "n_fal")
+  food_dat = data.frame()
+  filenames = list.files(data_dir, pattern = "FOOD_performance_.*.mat")
+  
+  for (filename in filenames) {
+    
+    ### Read in measures (columns= trials; rows= time points within trials)
+    data = readMat(file.path(data_dir, filename))$data
+    reward_schedule = as.data.frame(data[[1]])
+    reward_received = as.data.frame(data[[2]])
+    cor_key = as.data.frame(data[[3]])
+    fal_key = as.data.frame(data[[4]])
+    key_time = as.data.frame(data[[5]])
+    
+    ### Calculate trial means (sum over time points within trials)
+    SubjID = substr(filename, 18, 20)
+    run = substr(filename, 23, 23)
+    if (run == "A") {run = "Run 1"
+    } else if (run == "B") {run = "Run 2"
+    } else if (run == "C") {run = "Run 3"
+    } else if (run == "D") {run = "Run 4"
+    }
+    
+    subj_dat = cbind(SubjID, run, 1:60, matrix(colSums(reward_schedule)), matrix(colSums(reward_received)), matrix(colSums(cor_key)), matrix(colSums(fal_key)))
+    colnames(subj_dat) = col_names
+    
+    ### Add to food_dat
+    food_dat = rbind(food_dat, subj_dat)
+  }
+  
+  food_dat = add_group_columns(food_dat)
+  write.csv(food_dat, file.path(data_dir, "food_dat.csv"), row.names = F)
+}
+
+food_dat = read.csv(file.path(data_dir, "food_dat.csv"))
+
+### Remove break trials
+trialwise_food_dat = ddply(food_dat, .(trial), summarize, n_cor = mean(n_cor, na.rm = T))
+summary(trialwise_food_dat)
+break_trials = subset(trialwise_food_dat, n_cor == 0)$trial
+food_dat = subset(food_dat, !trial %in% break_trials)
+    
+summary(food_dat)
+head(food_dat)
+```
+```{r Performance over time, echo = F, message = F, warning = F}
+
+gg_food_over_trials = ggplot(food_dat, aes(trial, n_cor, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
+  labs(y = "# correct button presses") +
+  facet_wrap(~ run)
+gg_food_over_trials
+
+gg_food_over_trials2 = ggplot(food_dat, aes(trial, rew_rec - rew_avail, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
+  labs(y = "Received reward - available rewards") +
+  facet_wrap(~ run)
+gg_food_over_trials2
+
+sum_food_dat = ddply(food_dat, .(SubjID, run, training, training_s1), summarize,
+                     rew_rec = mean(rew_rec, na.rm = T),
+                     n_cor = mean(n_cor, na.rm = T))
+summary(sum_food_dat)
+
+gg_food_over_trials3 = ggplot(sum_food_dat, aes(run, n_cor, group = 1)) +
+  stat_summary(fun.y = mean, color = "red", geom = "point") +
+  geom_point(alpha = .2, position = "jitter") +
+  facet_wrap(~ training)
+gg_food_over_trials3
+```
+```{r Performance by subject, echo = F, message = F, warning = F}
+
+gg_food_by_subj = ggplot(food_dat, aes(SubjID, n_cor, group = SubjID, color = training)) +
+  geom_boxplot() +
+  labs(y = "# correct button presses / trial") +
+  facet_wrap(~ run)
+gg_food_by_subj
+
+# ddply(sum_food_dat, .(run, training), summarize,
+#       rew_rec = mean(rew_rec, na.rm = T),
+#       sd_rew_rec = sd(rew_rec, na.rm = T),
+#       n_cor = mean(n_cor, na.rm = T),
+#       sd_n_cor = sd(n_cor, na.rm = T))
+```
+
+# Category tasks
+
+```{r Read in data, echo = F, message = F, warning = F}
+
+if (preprocess_data) {
+  col_names = c("SubjID", "run", "task", "trial", "ACC", "RT")
+  cat_dat = data.frame()
+  filenames = list.files(data_dir, pattern = "CAT0.*.mat")
+  
+  for (filename in filenames) {
+    
+    ### Get SubjID and run
+    SubjID = substr(filename, 8, 10)
+    run = substr(filename, 14, 14)
+    task = substr(filename, 5, 6)
+    if (run == "A") {run = "Run 1"
+    } else if (run == "B") {run = "Run 2"
+    } else if (run == "C") {run = "Run 3"
+    } else if (run == "D") {run = "Run 4"
+    }
+    
+    ### Read in measures (ACC & RT)
+    exp = readMat(file.path(data_dir, filename))$exp
+    index = dim(exp)[1] - 20
+    
+    if (dim(exp)[1] == 42 | (SubjID == "187" & run == "Run 4") | (SubjID == "149" & run == "Run 1")) {   # Participants with funny data sets...
+      index = 21
+    }
+    if ((SubjID == "192" & run == "Run 4") | (SubjID == "193" & run == "Run 4")) {   # More funny data sets
+    index = 23
+    }
+    
+  
+    ACC = matrix(exp[[index]][[1]])
+    RT = matrix(exp[[index]][[2]])
+    length(RT) = length(ACC)
+    # key = matrix(exp[[index]][[4]])
+    # theta = matrix(exp[[index]][[6]])
+      
+    ### Add to cat_dat
+    subj_dat = cbind(SubjID, run, task, 1:length(ACC), ACC, RT)
+    colnames(subj_dat) = col_names
+    cat_dat = rbind(cat_dat, subj_dat)
+  }
+  cat_dat = subset(cat_dat, trial <= 110)   # only the first few participants got 120 trials
+  cat_dat = add_group_columns(cat_dat)
+  write.csv(cat_dat, file.path(data_dir, "cat_dat.csv"), row.names = F)
+}
+cat_dat = read.csv(file.path(data_dir, "cat_dat.csv"))
+
+### Remove super-fast trials
+cat_dat = subset(cat_dat, RT > 150 & !is.na(ACC))
+cat_dat = subset(cat_dat, !trial %in% break_trials)
+    
+summary(cat_dat)
+head(cat_dat)
+```
+```{r Performance over time, echo = F, message = F, warning = F}
+
+gg_cat_over_trials = ggplot(cat_dat, aes(trial, ACC, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange", alpha = .5) +
+  labs(y = "ACC") +
+  facet_grid(task ~ run)
+gg_cat_over_trials
+
+gg_cat_over_trials = ggplot(cat_dat, aes(trial, RT, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_boot, geom = "pointrange", alpha = .5) +
+  labs(y = "RT") +
+  facet_grid(task ~ run)
+gg_cat_over_trials
+
+sum_cat_dat = ddply(cat_dat, .(SubjID, run, task, training, training_s1), summarize,
+                     ACC = mean(ACC, na.rm = T),
+                     RT = median(RT, na.rm = T))
+summary(sum_cat_dat)
+
+gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, ACC, group = 1, color = task)) +
+  stat_summary(fun.y = mean, geom = "point", color = "black") +
+  geom_point(alpha = .5, position = "jitter") +
+  facet_wrap(~ training)
+gg_cat_over_trials3
+
+```
+```{r Performance by subject, echo = F, message = F, warning = F}
+
+gg_cat_by_subj = ggplot(cat_dat, aes(SubjID, ACC, group = SubjID, color = training)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+  labs(y = "ACC") +
+  facet_grid(task ~ run)
+gg_cat_by_subj
+
+```
+
 
 ### 2-step Task:
 
@@ -89,15 +292,15 @@ ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = re
 + Exclude trials with key perseverations (the same key pressed at least 10 times in a row) 
 
 ```{r, echo = F, warning = F}
-ts = read_in_2step()
-ts = add_group_columns(data = ts)
-ts_clean = remove_perseverance_trials(data = ts)[[1]]
-# write.table(ts, file = "2steptask/Results/all/ts_clean.csv", quote = F, sep = ",", row.names = F)
-# summary(ts_clean)
-
-ts_params = read_in_2step_parameters()
-ts_params = add_group_columns(ts_params)
-# summary(ts_params)
+# ts = read_in_2step()
+# ts = add_group_columns(data = ts)
+# ts_clean = remove_perseverance_trials(data = ts)[[1]]
+# # write.table(ts, file = "2steptask/Results/all/ts_clean.csv", quote = F, sep = ",", row.names = F)
+# # summary(ts_clean)
+# 
+# ts_params = read_in_2step_parameters()
+# ts_params = add_group_columns(ts_params)
+# # summary(ts_params)
 ```
 
 
@@ -124,43 +327,15 @@ ts_params = add_group_columns(ts_params)
     
 Both measures are plausible as measures of ToL performance and vary between subjects:
 
-```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-# Difference between estimated and executed moves
-MadeEstimPlot = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
-  geom_boxplot() +
-  labs(x = "Subject ID", y = "Made moves - estimated moves") +
-  facet_wrap(~ run)
-MadeEstimPlot
-
-MadeMinPlot = ggplot(ToL, aes(SubjID, Made_minus_MinMoves)) +
-  geom_boxplot() +
-  labs(x = "Subject ID", y = "Made moves - min moves") +
-  facet_wrap(~ run)
-MadeMinPlot
-```
-```{r, echo = F, eval = F}
-## Also of interest?
-# The more moves are necessary minimally, the more the deviation in the executed moves
-ggplot(ToL, aes(MinMoves, MadeMoves, color = SubjID)) +
-  geom_point(position = "jitter") +
-  geom_abline(intercept = 0, slope = 1) +
-  coord_cartesian(xlim = c(0, 20), ylim = c(0, 20))
-
-# Usually, more moves are needed than previously estimated
-ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
-  geom_point(position = "jitter") +
-  geom_abline(intercept = 0, slope = 1) +
-  coord_cartesian(xlim = c(0, 25), ylim = c(0, 25))
-```
 
 3.  ***How much did performance increase through the training?***  
     This indicates how much effect the training had at all on the subjects. Here is the difference in the performance measures above between the first and second run of the Tower of London.
     
 ```{r, echo = F, warning = F, fig.height = 4.5, fig.width = 9}
-M_based = create_summary_data_frames()[[1]]
-M_free  = create_summary_data_frames()[[2]]
-
-plot_ToL_diffscores()
+# M_based = create_summary_data_frames()[[1]]
+# M_free  = create_summary_data_frames()[[2]]
+# 
+# plot_ToL_diffscores()
 ```
 
 
@@ -169,9 +344,9 @@ plot_ToL_diffscores()
 1. ***How many coins did the subjects collect overall?***
 
 ```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-source("TP_functions.R")
-tsTotalACCPlot = plot_ts_perf_total(variable = "reward")
-tsTotalACCPlot
+# source("TP_functions.R")
+# tsTotalACCPlot = plot_ts_perf_total(variable = "reward")
+# tsTotalACCPlot
 ```
 
 2. ***How fast were they at responding?***  
@@ -179,8 +354,8 @@ tsTotalACCPlot
    They might therefore be a good indicator of performance.
 
 ```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-tsTotalRTPlot = plot_ts_perf_total(variable = "RT")
-tsTotalRTPlot
+# tsTotalRTPlot = plot_ts_perf_total(variable = "RT")
+# tsTotalRTPlot
 ```
 
 3. ***How much did their performance change over the course of the training?***  
@@ -198,9 +373,9 @@ tsTotalRTPlot
 + *Rewards and response times _are_ independent*. As expected, there is *no* difference in response time between rewarded and non-rewarded trials:
 
 ```{r, echo = F}
-r0 = with(ts, RT1[reward == "No reward"] + RT2[reward == "No reward"])
-r1 = with(ts, RT1[reward == "Reward"] + RT2[reward == "Reward"])
-t.test(r0, r1)
+# r0 = with(ts, RT1[reward == "No reward"] + RT2[reward == "No reward"])
+# r1 = with(ts, RT1[reward == "Reward"] + RT2[reward == "Reward"])
+# t.test(r0, r1)
 ```
 
 ##### Is performance in the tasks related to performance in ToL/GoNogo?
