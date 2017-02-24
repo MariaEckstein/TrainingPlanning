@@ -9,7 +9,7 @@ output: pdf_document
 data_source = "2016"
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 ggsave_figures = T                      # Save figures as pngs onto the computer?
-preprocess_data = T
+preprocess_data = F
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
 data_dir = file.path(home_dir, "allResults/XlabData2016")
@@ -27,6 +27,7 @@ library("reshape"); library("R.matlab"); library("car"); library("zoo"); library
 + Save resulting data as .csv
 
 ```{r Prepare data, echo = F, warning = F}
+
 ToL = read.table("auswertung_alle.txt",
                  header = T,
                  sep = " ", na.strings = "",
@@ -47,15 +48,18 @@ summary(ToL)
 write.table(ToL, file = "ToL_data.csv", quote = F, sep = ",", row.names = F)
 ```
 ```{r Plot made moves - min & estim moves ~ SubjID, echo = F, warning = F, fig.height = 9, fig.width = 9}
+
 # Difference between estimated and executed moves
 gg_made_estim = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
-  geom_boxplot() +
+  stat_summary(fun.y = mean, geom = "bar", fill = "red") +
+  geom_point(alpha = .5) +
   labs(x = "Subject ID", y = "Made moves - estimated moves") +
   facet_wrap(~ run)
 gg_made_estim
 
 gg_made_min = ggplot(ToL, aes(SubjID, Made_minus_MinMoves)) +
-  geom_boxplot() +
+  stat_summary(fun.y = mean, geom = "bar", fill = "red") +
+  geom_point(alpha = .5) +
   labs(x = "Subject ID", y = "Made moves - min moves") +
   facet_wrap(~ run)
 gg_made_min
@@ -92,12 +96,12 @@ for (rew_prob in seq(0.1, 0.3, 0.05)) {
   }
 }
 
-ggplot(prob_of_rewards, aes(number_of_rewards, probability * 100, color = rew_prob, group = rew_prob)) +
+gg_food_prob1 = ggplot(prob_of_rewards, aes(number_of_rewards, probability * 100, color = rew_prob, group = rew_prob)) +
   geom_point() +
   geom_line() +
   labs(x = "Number of rewards (trial)", y = "Probability (%)", color = "Rew. prob. / int.")
 
-ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = rew_prob, group = rew_prob)) +
+gg_food_prob2 = ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = rew_prob, group = rew_prob)) +
   geom_point() +
   geom_line() +
   labs(x = "Number of rewards (trial)", y = "Cumulative probability (%)", color = "Rew. prob. / int.")
@@ -155,13 +159,13 @@ head(food_dat)
 
 gg_food_over_trials = ggplot(food_dat, aes(trial, n_cor, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
-  labs(y = "# correct button presses") +
+  labs(y = "# correct button presses / trial") +
   facet_wrap(~ run)
 gg_food_over_trials
 
 gg_food_over_trials2 = ggplot(food_dat, aes(trial, rew_rec - rew_avail, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
-  labs(y = "Received reward - available rewards") +
+  labs(y = "(# received rewards - # available rewards) / trial") +
   facet_wrap(~ run)
 gg_food_over_trials2
 
@@ -173,13 +177,14 @@ summary(sum_food_dat)
 gg_food_over_trials3 = ggplot(sum_food_dat, aes(run, n_cor, group = 1)) +
   stat_summary(fun.y = mean, color = "red", geom = "point") +
   geom_point(alpha = .2, position = "jitter") +
+  labs(y = "av. # correct button presses / trial") +
   facet_wrap(~ training)
 gg_food_over_trials3
 ```
 ```{r Food performance by subject, echo = F, message = F, warning = F}
 
 gg_food_by_subj = ggplot(food_dat, aes(SubjID, n_cor, group = SubjID, color = training)) +
-  geom_boxplot() +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
   labs(y = "# correct button presses / trial") +
   facet_wrap(~ run)
 gg_food_by_subj
@@ -243,22 +248,23 @@ cat_dat = read.csv(file.path(data_dir, "cat_dat.csv"))
 
 ### Remove super-fast trials
 cat_dat = subset(cat_dat, RT > 150 & !is.na(ACC))
-cat_dat = subset(cat_dat, !trial %in% break_trials)
     
 summary(cat_dat)
 head(cat_dat)
 ```
 ```{r Cateogry performance over time, echo = F, message = F, warning = F}
 
-gg_cat_over_trials = ggplot(cat_dat, aes(trial, ACC, color = training, group = training)) +
+gg_cat_over_trials = ggplot(cat_dat, aes(trial, 100 * ACC, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange", alpha = .5) +
-  labs(y = "ACC") +
+  labs(y = "% correct classifications") +
+  geom_hline(yintercept = 25) +
+  geom_text(label = "chance", x = 95, y = 20, color = "black") +
   facet_grid(task ~ run)
 gg_cat_over_trials
 
-gg_cat_over_trials = ggplot(cat_dat, aes(trial, RT, color = training, group = training)) +
+gg_cat_over_trials = ggplot(cat_dat, aes(trial, RT / 1000, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_boot, geom = "pointrange", alpha = .5) +
-  labs(y = "RT") +
+  labs(y = "RT (sec)") +
   facet_grid(task ~ run)
 gg_cat_over_trials
 
@@ -267,18 +273,22 @@ sum_cat_dat = ddply(cat_dat, .(SubjID, run, task, training, training_s1), summar
                      RT = median(RT, na.rm = T))
 summary(sum_cat_dat)
 
-gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, ACC, group = 1, color = task)) +
+gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, 100 * ACC, group = 1, color = task)) +
   stat_summary(fun.y = mean, geom = "point", color = "black") +
   geom_point(alpha = .5, position = "jitter") +
+  geom_hline(yintercept = 25) +
+  geom_text(label = "chance", x = 95, y = 20, color = "black") +
   facet_wrap(~ training)
 gg_cat_over_trials3
 
 ```
 ```{r Category performance by subject, echo = F, message = F, warning = F}
 
-gg_cat_by_subj = ggplot(cat_dat, aes(SubjID, ACC, group = SubjID, color = training)) +
+gg_cat_by_subj = ggplot(cat_dat, aes(SubjID, 100 * ACC, group = SubjID, color = training)) +
   stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
   labs(y = "ACC") +
+  geom_hline(yintercept = 25) +
+  geom_text(label = "chance", x = 200, y = 20, color = "black") +
   facet_grid(task ~ run)
 gg_cat_by_subj
 

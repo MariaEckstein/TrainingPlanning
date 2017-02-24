@@ -528,7 +528,6 @@ add_performance_columns_ToL = function() {
   ToL$MinMoves[ToL$StartTower == "ST002010" & ToL$GoalTower == "GT201011"] = 4#
   ToL$MinMoves[ToL$StartTower == "ST001001" & ToL$GoalTower == "GT201110"] = 4#
   
-  
   ToL$MinMoves[ToL$StartTower == "ST101100" & ToL$GoalTower == "GT110010"] = 5#
   ToL$MinMoves[ToL$StartTower == "ST001020" & ToL$GoalTower == "GT102000"] = 5#
   ToL$MinMoves[ToL$StartTower == "ST000120" & ToL$GoalTower == "GT200001"] = 5#
