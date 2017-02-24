@@ -1218,9 +1218,6 @@ if (ggsave_figures) {
 # # summary(ToL)
 # # write.table(ToL, file = "TowerTasks/auswertung_alle.csv", quote = F, sep = ",", row.names = F)
 # 
-# # The detach commands are necessary when executing the code by hand; they are not necessary when knitting
-# # detach("package:Hmisc", unload = T)
-# # detach("package:ggplot2", unload = T)
 # Ass = read_in_labass(data = "Ass.csv")
 # Ass = exclude_trials(Ass)
 # Ass = add_group_columns(data = Ass)

@@ -1,0 +1,219 @@
+---
+title: "AnalyzingTheOtherTasks"
+author: "Maria Eckstein"
+date: "June 26, 2015"
+output: pdf_document
+---
+
+# PART 1: Goals of the study (in the other document)
+
+
+# PART 2: Statistical Analyses
+
+## Prepare R and R.packages
+```{r, echo = F, results = F, warning = F, message = F}
+setwd("C:/Users/maria/MEGAsync/GSN/Wunderlich Lab/TrainingPlanningProject")
+source("TP_functions.R")
+library("ggplot2"); library("gridExtra"); library("nlme"); library("reshape"); library("plyr")
+theme_set(theme_bw())   #make ggplot theme_bw()
+```
+
+## Prepare and clean the data
+
+### Tower of London:
+
++ Read in data set as `ToL` and set `numeric` and `factor` columns
++ Add column with minimum number of possible moves
++ Add columns indicating the subject `group` (model-free training session: `m_free`; model-based training session: `m_based`)
++ Save resulting data as .csv
+
+```{r, echo = F, warning = F}
+ToL = read_in_ToL()
+ToL = add_performance_columns_ToL()
+ToL = add_group_columns(data = ToL)
+# summary(ToL)
+write.table(ToL, file = "TowerOfLondonTask/auswertung_completed.csv", quote = F, sep = ",", row.names = F)
+```
+
+### Category learning, Food, Orientation discrimination, Number comparison:
+
+#### Reward probabilities in the Food task
+
+```{r, echo = F, warning = F, message = F}
+prob_of_rewards = expand.grid(number_of_rewards = 0:8, rew_prob = seq(0.1, 0.3, 0.05), probability = NA, cum_probability = NA)
+prob_of_rewards$rew_prob = factor(prob_of_rewards$rew_prob)
+
+for (rew_prob in seq(0.1, 0.3, 0.05)) {
+  cum_prob = 0
+  for (numb_of_rew in 8:0) {
+    prob = choose(8, numb_of_rew) * (rew_prob ^ numb_of_rew) * ((1 - rew_prob) ^ (8 - numb_of_rew))
+    cum_prob = cum_prob + prob
+    prob_of_rewards[prob_of_rewards$number_of_rewards == numb_of_rew &
+                    prob_of_rewards$rew_prob == rew_prob, c("probability", "cum_probability")] = c(prob, cum_prob)
+  }
+}
+
+ggplot(prob_of_rewards, aes(number_of_rewards, probability * 100, color = rew_prob, group = rew_prob)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Number of rewards (trial)", y = "Probability (%)", color = "Rew. prob. / int.")
+
+ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = rew_prob, group = rew_prob)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Number of rewards (trial)", y = "Cumulative probability (%)", color = "Rew. prob. / int.")
+
+```
+
+### 2-step Task:
+
++ Read in raw data set as `ts` and parameter data set as `ts_params`; set columns to `numeric` and `factor`
++ Add columns indicating the subject `group` (model-free training session: `m_free`; model-based training session: `m_based`)
++ Exclude trials with key perseverations (the same key pressed at least 10 times in a row) 
+
+```{r, echo = F, warning = F}
+ts = read_in_2step()
+ts = add_group_columns(data = ts)
+ts_clean = remove_perseverance_trials(data = ts)[[1]]
+# write.table(ts, file = "2steptask/Results/all/ts_clean.csv", quote = F, sep = ",", row.names = F)
+# summary(ts_clean)
+
+ts_params = read_in_2step_parameters()
+ts_params = add_group_columns(ts_params)
+# summary(ts_params)
+```
+
+## Was the training effective? (in the other script)
+...
+
+## Is training performance an additional predictor of how subjects solve the 2-step Task?
+
+### What indicators of performance should we use?
+
++ Overall hit rate, false alarm rate, d-prime? ("*How well did the subjects perform in the training?*")
++ Reaction time? ("*Did they perceive the tasks as easy and solve the fluently?*")
++ Increases in performance over time? ("*How much did they learn through the training? How big was the effect of the training?*")
+
+#### 2-step Task:
+
++ Money earned?
++ Number of optimal decisions? (Problem: How to determine that? Based on theoretical probabilities or reward history?)
+
+#### Tower of London:
+
+1.  ***How big was the difference between the number of estimated and executed moves?***  
+    This indicates how good a subject was at making a precise plan and sticking to it.
+    
+2.  ***How many extra moves did the subjects need to solve the problems (above the minimum possible number)?***  
+    This indicates how good a subject was at finding the best possible solution.
+    
+Both measures are plausible as measures of ToL performance and vary between subjects:
+
+```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
+# Difference between estimated and executed moves
+MadeEstimPlot = plot_ToL_perf(data = ToL, variable = "Made_minus_EstimMoves",
+                              title = "Difference made - estimated",
+                              ylab = "How many more moves were made than estimated?")
+
+# Difference between the minimum possible number of moves and made moves
+MadeMinPlot = plot_ToL_perf(data = ToL, variable = "Made_minus_MinMoves",
+                            title = "Extra moves",
+                            ylab = "How many more moves were made than necessary?")
+
+## Plot both
+grid.arrange(MadeEstimPlot, MadeMinPlot, nrow = 2)
+```
+```{r, echo = F, eval = F}
+## Also of interest?
+# The more moves are necessary minimally, the more the deviation in the executed moves
+ggplot(ToL, aes(MinMoves, MadeMoves, color = SubjID)) +
+  geom_point(position = "jitter") +
+  geom_abline(intercept = 0, slope = 1) +
+  coord_cartesian(xlim = c(0, 20), ylim = c(0, 20))
+# Usually, more moves are needed than previously estimated
+ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
+  geom_point(position = "jitter") +
+  geom_abline(intercept = 0, slope = 1) +
+  coord_cartesian(xlim = c(0, 25), ylim = c(0, 25))
+```
+
+3.  ***How much did performance increase through the training?***  
+    This indicates how much effect the training had at all on the subjects. Here is the difference in the performance measures above between the first and second run of the Tower of London.
+    
+```{r, echo = F, warning = F, fig.height = 4.5, fig.width = 9}
+# detach("package:Hmisc", unload = T)
+detach("package:ggplot2", unload = T)
+M_based = create_summary_data_frames()[[1]]
+M_free  = create_summary_data_frames()[[2]]
+
+library(ggplot2)
+theme_set(theme_bw())
+plot_ToL_diffscores()
+```
+
+
+##### 2-step Task:
+
+1. ***How many coins did the subjects collect overall?***
+
+```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
+source("TP_functions.R")
+tsTotalACCPlot = plot_ts_perf_total(variable = "reward")
+tsTotalACCPlot
+```
+
+2. ***How fast were they at responding?***  
+   Response times differ between subjects and seem to be consistent from the 1st to the 2nd run.  
+   They might therefore be a good indicator of performance.
+
+```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
+tsTotalRTPlot = plot_ts_perf_total(variable = "RT")
+tsTotalRTPlot
+```
+3. ***How much did their performance change over the course of the training?***  
+   That is, ... .
+   
+```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
+
+# GNACCOverTimePlot = plot_labassgn_perf_over_time(data = GN, variable = "ACC", task_name = "GoNogo", section_size = 10)[[1]]
+# GNRTOverTimePlot = plot_labassgn_perf_over_time(data = GN, variable = "RT", task_name = "GoNogo", section_size = 10)[[1]]
+# 
+# grid.arrange(GNACCOverTimePlot, GNRTOverTimePlot, nrow = 2)
+
+```
+
++ *Rewards and response times _are_ independent*. As expected, there is *no* difference in response time between rewarded and non-rewarded trials:
+
+```{r, echo = F}
+r0 = with(ts, RT1[reward == "No reward"] + RT2[reward == "No reward"])
+r1 = with(ts, RT1[reward == "Reward"] + RT2[reward == "Reward"])
+t.test(r0, r1)
+```
+
+##### Is performance in the tasks related to performance in ToL/GoNogo?
+
+
+
+#### Does good training performance predict good 2-step performance?
+
++ __Median split__ based on Association, GoNogo, Tower of London, and Labyrinth tasks; does 2-step performance differ?
++ __Pearson correlation__ between training task performance and 2-step performance?
++ __Hypothesis__: It might...
+
+#### Does good training performance predict stronger training effects?
+
++ __Regression__ with the predictors _training_, _session_, and _performace_ on the outcome 2-step _strategy_
++ __Hypothesis__:
+    + _Main effect of training_: YES! (see above)
+    + _Main effect of performance_: Maybe! The better the performance, the more model-based do they approach the task (Good performance in either training condition might predict model-based strategy? Because that is simply the right way to do the task and subjects are obviously able to do tasks the right way...
+    + _Interaction between training and performance_: YES! Good performance in the planning condition leads to a more model-based strategy; good performance in the association condition leads to a more model-free strategy.
+    + _Interactions with session_: Maybe! (see above)
+    
+### Is meta-cognition and additional predictor of how subjects solve the 2-step task?
+
+* __Regression__ with the predictors _training_ (planning vs. association), _session_, and _metacognition_ on the outcome 2-step _strategy_
+    + __Hypothesis__: The more meta-cognitive introspection, the better the training works because they get the similarities between the tasks and apply it in the new one.
+
+#### What should we use as a measure of meta-cognition?
+
+* Did the subjects mention something in the lines of "model-based"/"model-free" or "goal-directed"/"habitual" or "planning", "strategy"?

@@ -29,7 +29,6 @@ histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
 title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
-genrec_dat = genrec.read_data;
 genrec_dat = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
 genrec_dat = sortrows(genrec_dat, [agentID_c run_c]);   % sort by agentID and runID
 [n_agents, ~] = size(genrec_dat);
