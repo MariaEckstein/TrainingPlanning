@@ -78,7 +78,7 @@ gg_estim_spread = ggplot(ToL, aes(EstimMoves, MadeMoves, color = SubjID)) +
 
 # Food task
 
-```{r Theoretical reward probabilities, echo = F, warning = F, message = F}
+```{r Theoretical reward probabilities in food task, echo = F, warning = F, message = F}
 prob_of_rewards = expand.grid(number_of_rewards = 0:8, rew_prob = seq(0.1, 0.3, 0.05), probability = NA, cum_probability = NA)
 prob_of_rewards$rew_prob = factor(prob_of_rewards$rew_prob)
 
@@ -103,7 +103,7 @@ ggplot(prob_of_rewards, aes(number_of_rewards, cum_probability * 100, color = re
   labs(x = "Number of rewards (trial)", y = "Cumulative probability (%)", color = "Rew. prob. / int.")
 
 ```
-```{r Read in data and summarize by trials, echo = F, warning = F, message = F}
+```{r Read in food data and summarize by trials, echo = F, warning = F, message = F}
 
 if (preprocess_data) {
   col_names = c("SubjID", "run", "trial", "rew_avail", "rew_rec", "n_cor", "n_fal")
@@ -151,7 +151,7 @@ food_dat = subset(food_dat, !trial %in% break_trials)
 summary(food_dat)
 head(food_dat)
 ```
-```{r Performance over time, echo = F, message = F, warning = F}
+```{r Food performance over time, echo = F, message = F, warning = F}
 
 gg_food_over_trials = ggplot(food_dat, aes(trial, n_cor, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
@@ -176,7 +176,7 @@ gg_food_over_trials3 = ggplot(sum_food_dat, aes(run, n_cor, group = 1)) +
   facet_wrap(~ training)
 gg_food_over_trials3
 ```
-```{r Performance by subject, echo = F, message = F, warning = F}
+```{r Food performance by subject, echo = F, message = F, warning = F}
 
 gg_food_by_subj = ggplot(food_dat, aes(SubjID, n_cor, group = SubjID, color = training)) +
   geom_boxplot() +
@@ -193,7 +193,7 @@ gg_food_by_subj
 
 # Category tasks
 
-```{r Read in data, echo = F, message = F, warning = F}
+```{r Read in category data, echo = F, message = F, warning = F}
 
 if (preprocess_data) {
   col_names = c("SubjID", "run", "task", "trial", "ACC", "RT")
@@ -248,7 +248,7 @@ cat_dat = subset(cat_dat, !trial %in% break_trials)
 summary(cat_dat)
 head(cat_dat)
 ```
-```{r Performance over time, echo = F, message = F, warning = F}
+```{r Cateogry performance over time, echo = F, message = F, warning = F}
 
 gg_cat_over_trials = ggplot(cat_dat, aes(trial, ACC, color = training, group = training)) +
   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange", alpha = .5) +
@@ -274,7 +274,7 @@ gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, ACC, group = 1, color = task)
 gg_cat_over_trials3
 
 ```
-```{r Performance by subject, echo = F, message = F, warning = F}
+```{r Category performance by subject, echo = F, message = F, warning = F}
 
 gg_cat_by_subj = ggplot(cat_dat, aes(SubjID, ACC, group = SubjID, color = training)) +
   stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
