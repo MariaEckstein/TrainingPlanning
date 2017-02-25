@@ -69,12 +69,10 @@ Reinforcement Learning Model-based Model-free Decision Making
 
 \section{TDs:}
 \begin{itemize}
-	\item Add figure about 2-step task
-	\item Look at participants who did the training well
 	\item Constrain p and k to reasonable limits
 	\item Simulate data using participants' parameter values -> recover
 	\item Do some more research on mb / mf studies?
-	\item Look at AIC and BIC to find best model
+	\item Describe the tasks in more detail
 \end{itemize}
 
 \section{Updates:}
@@ -84,28 +82,22 @@ Reinforcement Learning Model-based Model-free Decision Making
 
 \section{Introduction}
 
-Humans make many decisions and solve a large number of problems every day: Which restaurant to pick for dinner, which books to select for reading, what to do on the weekend. What strategies do humans use to make such decisions? In the behaviorist tradition of psychology (Skinner, Watson, Pavlov), researchers have contended that all observed behavior, ranging from button pressing in rats to language production in humans, can be explained in terms of responses elicited by a specific stimulus (Skinner, 1977). In this view, all behavior is the product of shaping, in which the reward characteristics of the environment lead to the formation of stable stimulus-response associations. According to this view, we pick a restaurant for dinner, with which we have had good experiences so far. Cognitive psychologists, on the other hand, have contended that humans and animals possess internal representations of their environment and are able to reason about causal relationships and contingencies (Tolman, 1948). In the cognitivist view, agents choose specific actions based on mental simulations of their likely consequences. In this view, we'd pick the restaurant that we reason fulfills a list of relevant criteria.
+Humans make many decisions every day: Which restaurant to pick for dinner, which book to select for reading, where to go for the weekend. What strategies do humans use to make such decisions? In the behaviorist tradition of psychology (Skinner, Watson, Pavlov), researchers have contended that all observed behavior, ranging from button pressing in rats to language production in humans, can be explained conditioned responses elicited by specific stimuli (Skinner, 1977). In this view, all behavior is the product of shaping, in which the reward characteristics of the environment lead to the formation of stable stimulus-response associations. According to this view, we pick a restaurant where we have had good experiences so far. Cognitive psychologists, on the other hand, contend that humans and animals possess internal representations of their environment and are able to reason about causal relationships and contingencies (Tolman, 1948). In the cognitivist view, agents choose specific actions based on mental simulations of their likely consequences. In this view, we pick a restaurant that leads to the best result in our mental simulation, based on our world knowledge.
 
-These two opposing characterizations of decision making, behaviorist and cognitivist, are mirrored in the third big framework of machine learning beside supervised and unsupervised learning---in reinforcement learning (Sutton \& Barto, 2012). In reinforcement learning, sequential tasks are characterized as Markov Decisions Problems (MDPs), in which certain states are associated with rewards. Actions allow agents to transfer between states. An agent's goal is to maximize rewards in the long run, i.e., to learn an optimal mapping between states and actions, so as to choose the path that leads to the most rewards. Such an optimal policy is often achieved by learning values, which indicate for each action in each state, how much reward is expected when taking this action in this state. Model-free agents determine values by averaging over the past reward history following each state-action pair (Monte Carlo), similar to the behaviorist framework in psychology. Model-based agents, on the other hand, use an internal model of the environment to simulate action outcomes, similar to the cognitivist tradition.
+These two opposing characterizations of decision making, behaviorist and cognitivist, are mirrored in one of the three big frameworks of machine learning, reinforcement learning (Sutton \& Barto, 2012). In reinforcement learning, sequential tasks are characterized as Markov Decision Problems (MDPs), in which agents transfer between states by employing actions, and receive rewards in certain states. An agent's goal is to maximize rewards in the long run, i.e., to learn an optimal mapping between states and action probabilities, so as to choose an optimal path through the state space. Model-free agents determine the values of actions in each state by averaging over their past reward history, similar to the behaviorist framework in psychology. Model-based agents, on the other hand, use an internal model of the environment, including transition probabilities between states and reward probabilities, to simulate action outcomes, similar to the cognitivist tradition.
 
-Bringing psychology and machine learning together, past research has shown that human and animal behavior can be modeled using reinforcement learning algorithms. A big success was the finding that activity in the brain's dopamine system, sometimes called the brain's "reward system" (Wise, 1982), coincided precisely with the occurrence of reward prediction errors, central components of reinforcement learning (Schultz, 1997). Much interest has also been in the differentiation of model-based and model-free reinforcement learning in animals and humans. Daw and colleagues (year) developed a behavioral task that aims at differentiating model-based and model-free components in humans, the "2-step task". Individuals differ in their propensities toward model-based or model-free decision making, but this balance is also situation-dependent. The balance tips toward model-free decision making, fast and with lower cognitive demands, during stress (Schwabe \& Wolf, 2011) or when multiple tasks are performed simultaneously (Otto, Gershman, Markman, \& Daw, 2013). However, it has not been shown how the balance could be tipped the other way, to increase model-based decisions. The only study that has achieved this---to the best of our knowledge---was a pharmacological manipulation of dopamine levels, rather than a cognitive manipulation (Wunderlich, Smittenaar, \& Dolan, 2012).
+Bringing psychology and machine learning together, past research has shown that human and animal behavior can be modeled through reinforcement learning. A major finding concerns the striking similarity between activity in the dopamine system, the brain's "reward system" (Wise, 1982), and the occurrence of reward prediction errors as specified in reinforcement learning (Schultz, 1997). More recently, researchers have sought to differentiate model-based and model-free decision strategies in humans and to determine whether different brain regions underlie each. Model-free decision making, fast and low in cognitive demand, increases when time and/or cognitive resources are sparse, for example during stress (Schwabe \& Wolf, 2011) or when multi-tasking (Otto, Gershman, Markman, \& Daw, 2013). The brain regions involved in model-free decision making include subcortical regions and the ventral striatum (Dolan \& Dayan, 2013). On the other hand, no situations have yet been identified that increase model-based decision making, although some brain regions underlying these processes have been identified (frontal cortex and dorsal striatum; Dolan \& Dayan, 2013). The only study that has shown an increase in model-based decision making was a pharmacological manipulation of dopamine levels (Wunderlich, Smittenaar, \& Dolan, 2012). 
 
-Where?? model-based: frontal cortex and dorsal striatum; model-free: subcortical regions and ventral striatum; Dolan \& Dayan, 2013
+In the current study, we therefore sought to investigate whether a cognitive intervention would increase model-based decision making in human participants. We hypothesized that decision strategies are influenced by prior cognitive activities. Forward-planning and mental simulation should influence model-based decisions, whereas habitual, reward-driven behavior should influence model-free decisions. This influence could go either way, fostering (cognitive enhancement hypothesis) or depressing (cognitive depletion hypothesis) the decision strategy. An increase in model-based decision making after model-based activities would support the cognitive enhancement hypothesis; an increase of model-based decision making after model-free activities would support the cognitive depletion hypothesis.
 
-The current study aims to investigate whether cognitive interventions can manipulate the balance between model-based and model-free decision making, going both ways. We hypothesized that decision making strategies would depend on the kind of cognitive processes that participants engaged in before. Engaging in forward-planning and mental simulation before assessment should foster model-based decisions, whereas engaging in habitual, stimulus-driven behavior should foster model-free decisions. Second, we hypothesized that the same would hold for brain areas known to underlie model-based (frontal cortex and dorsal striatum) versus model-free decision making (subcortical regions and ventral striatum; Dolan \& Dayan, 2013). Prior tasks that activate one set should foster model-based decisions, whereas the other set should increase model-free decisions. Lastly, tasks that are unrelated to model-based and model-free processes and brain areas should have no influence on subsequent decision making and allow for a baseline assessment of model-based and model-free decisions.
+In order to rule out alternative explanations of such changes, we also included a control group, which received cognitive tasks that were not related to (model-based or model-free) decision making. In this group, we expected to see naturally occurring changes in decision making when tested multiple times. 
 
-Based on these hypotheses, we pre-registered the study prior to data collection on the Open Science Framework (www.osf.org/...).
+These hypotheses were pre-registered on the Open Science Framework prior to data collection (www.osf.org/...).
 
 \section{Methods and Results}
 \subsection{Study Design}
 
 We designed the following cognitive intervention based on our hypotheses: We asked 116 participants to take part in a two-session experiment, with the session taking place two days apart. We assessed participants' decision strategies using Daw et al.'s 2-step task at the beginning and end of each session, i.e., four times in total. Participants were randomly assigned to one of five groups. The control group engaged in the same two control tasks during the first and second session, a number comparison task (cite), and an orientation-discrimination task (cite). The model-based group (MB-MB) received the Tower of London task (cite) and a rule-based category task (Ashby \& Maddox) during both sessions and the model-free group (MF-MF) received an operant condition task (cite) and an information-integration category (cite) task in both sessions. The last two groups of participants were mixed: the MB-MF group received the tasks of the MB-MB group in the first session, and of the MF-MF group in the second session. The opposite was true for the MF-MB group. The analyses presented here focus on the first three 2-step assessments and collapse over the MB-MB and MB-MF groups, who had only received the model-based intervention up to that point. Likewise, we collapses over the MF-MF and MF-MB groups who had only engaged the model-free tasks yet.
-
-\begin{figure}
-	\includegraphics[width=0.5\linewidth]{TwoStepTask.png}
-	\caption{bla.}
-	\label{TwoStep}
-\end{figure}
 
 In each trial of the 2-step task, with which we assessed model-based and model-free behavior, participants select one of two stimuli in the first stage (e.g., blue vs green). Depending on the selected stimulus (e.g., green), participants are then presented with a second binary decision (e.g., red vs yellow stimulus). The second choice determines whether participants are rewarded or not. Each stimulus in the second stage is associated with a certain, independent reward probability (which slowly changes over time). Crucially, the link between first-stage choice and second-stage pair is probabilistic, rather than deterministic. In our example, selecting the green stimulus in the first stage would lead to the read-vs-yellow stage in 70\% of cases, but to a different, e.g., pink-vs-purple stage in 30\% of the trials. The opposite would be true for the blue stimulus in the first stage.
 
@@ -124,13 +116,13 @@ We first used the behavioral approach to analyze the data. We assessed participa
 	\label{Fig1}
 \end{figure}
 
-We next tested for differences in decision making between groups, but the regression models revealed no significant differences. There were no interactions at any time point between reward and group, which would have indicated differences in the model-free component (stats). Nor were there interactions between reward, transition, and group, which would have indicated differences in the model-based component (Run 1: group*reward, p = 0.55, ...). Lagged regression models (cite) and logistic regression model on the individual data supported this conclusion.
+We next tested for differences in decision making between groups, but the regression models revealed no significant differences. There were no interactions at any time point between reward and group, which would have indicated differences in the model-free component (stats). Nor were there interactions between reward, transition, and group, which would have indicated differences in the model-based component (Run 1: group* reward, p = 0.55, ...). Lagged regression models (cite) and logistic regression model on the individual data supported this conclusion.
 
 \subsection{RL Modeling Analysis}
 We next employed classical RL models to assess participants' decision process in more detail. In the models, agents chose actions $a$ based on internally-represented action values $Q$. Action values indicate how much reward an agent expects from choosing an action. In order to learn action values, agents observe the outcome of each trial (reward $R = 1$ or $R = 0$) and update the value $Q(s', a')$ of the selected second-stage action $a'$ in the second stage $s'$, in the following way:
 
 \begin{equation}
-Q(s', a') = Q(s', a') + \alpha' * RPE,
+Q(s', a') = Q(s', a') + \alpha' \cdot RPE,
 \end{equation}
 \begin{equation}
 RPE = R - Q(s', a')
@@ -139,7 +131,7 @@ RPE = R - Q(s', a')
 where $ \alpha' $ is an agent's learning rate, specific to learning of second-stage action values. Having updated the value $Q(s', a')$ of the selected second-stage action, agents then update the values $Q(s, a)$ of first-stage actions. Model-free agents do the following:
 
 \begin{equation}
-Q_{mf}(s, a) = Q_{mf}(s, a) + \alpha * (VPE + \lambda * RPE)
+Q_{mf}(s, a) = Q_{mf}(s, a) + \alpha \cdot (VPE + \lambda \cdot RPE)
 \end{equation}
 \begin{equation}
 VPE = Q(s', a') - Q_{mf}(s, a)
@@ -150,7 +142,7 @@ The value of the first-stage action depends on the reward prediction error (RPE)
 Model-based agents determined the values of first-stage actions based on their internal predictive model, taking into account their known transition probabilities $p(s', a, s)$ between state $s$ and state $s'$, when choosing action $a$:
 
 \begin{equation}
-Q_{mb}(s, a) = \sum_{s'} p(s', a, s) * max(Q(s', a'))
+Q_{mb}(s, a) = \sum_{s'} p(s', a, s) \cdot max(Q(s', a'))
 \end{equation}
 
 Model-based agents therefore updated first-stage values by calculating the expected rewards from each action, given the transition probabilities between first and second states.
@@ -158,7 +150,7 @@ Model-based agents therefore updated first-stage values by calculating the expec
 We modeled participants as hybrid agents who combined model-based and model-free value estimates for first-stage actions:
 
 \begin{equation}
-Q_{hyb}(s, a) = (1 - w) * Q_{mf}(s, a) + w * Q_{mb}(s, a)
+Q_{hyb}(s, a) = (1 - w) \cdot Q_{mf}(s, a) + w \cdot Q_{mb}(s, a)
 \end{equation}
 
 The parameter $w$ determines the weight of model-based and model-free values to determine the value of the first-stage action, which the agent used to select the action.
@@ -166,7 +158,7 @@ The parameter $w$ determines the weight of model-based and model-free values to 
 Agents selected actions $a$ and $a'$ in the following way, based on their action values $Q(s, a)$ and $Q(s', a')$:
 
 \begin{equation}
-P(a|s) = \frac{exp(\beta * Q(s, a) + k * K + p * P)}{\sum_{i} exp(\beta * Q(s, a_{i}) + k * K + p * P)}
+P(a|s) = \frac{exp(\beta \cdot Q(s, a) + k \cdot K + p \cdot P)}{\sum_{i} exp(\beta \cdot Q(s, a_{i}) + k \cdot K + p \cdot P)}
 \end{equation}
 
 $\beta$ is the agent's individual softmax temperature. $\beta$ determines whether the agent will always choose the action with the highest value, or explore both actions more equally. Different values of $\beta$ were allowed for the first and second state ($\beta$ and $\beta'$). Besides action values, participants action selection was also determined by whether the same action was chosen in the previous trial ($P$) and whether the same key was pressed in the previous trial ($K$). The weight of these factors were determined by weights $p$ and $k$, which varied by agent. The model fit only improved with the inclusion of choice perseverance $P$, but not key perseverance $K$, 
