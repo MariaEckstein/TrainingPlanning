@@ -52,8 +52,9 @@ After completing the experiment, some subjects reported that they had explored t
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
+do_exclude_bad_training_blocks = T      # Exclude 2-step blocks that come from sessions with really bad training task performance?
 ggsave_figures = T                      # Save figures as pngs onto the computer?
-preprocess_data = F
+preprocess_data = T
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
 data_dir = file.path(home_dir, "BerkeleyData/TwoStep")
@@ -168,6 +169,8 @@ for (subj in unique(ts_orig$SubjID)) {
 ## (2) Enough variation in 1st-stage choice
 ## (3) Not too much key perseverance
 ## (4) Not too fast RTs
+## (5) Lost more than 75% of data
+## (6) Bad training performance
 
 ## (1) Remove first 20 trials (as training)
 ts = subset(ts_orig, trial > 20)
@@ -204,10 +207,19 @@ ts = subset(ts, RT1 > limits.trial_RTs)
 ## (5) Lost more than 75% of data
 count_trials = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
 count_trials$few_trials = ifelse(count_trials$n_trials < limits.exclude_subject * 180, T, F)
-ts = merge(ts, count_trials)
+ts = merge(ts, count_trials, all = T)
 ts = subset(ts, !few_trials)
 ts$n_trials = ts$few_trials = NULL
 n_blocks_removed = nrow(subset(count_trials, few_trials))
+
+## (6) Bad training performance
+bad_perf = read.csv("C:/Users/maria/MEGAsync/TrainingPlanningProject/allResults/XlabData2016/bad_perf.csv")
+ts = merge(ts, bad_perf, all = T)
+if (do_exclude_bad_training_blocks) {
+  ts = subset(ts, (is.na(ToL_bad) | !ToL_bad) & (is.na(food_bad) | !food_bad) & (is.na(catii_bad) | !catii_bad) & (is.na(catrb_bad) | !catrb_bad))
+  n_blocks_bad_training = with(bad_perf, sum(ToL_bad, na.rm = T) + sum(food_bad, na.rm = T) + sum(catii_bad, na.rm = T) + sum(catrb_bad, na.rm = T))
+}
+ts$ToL_bad = ts$food_bad = ts$catii_bad = ts$catrb_bad = NULL
 
 ## Combine the preprocessing data 
 preproc_dat = merge(preproc_dat, count_too_fast_RTs, by = c("SubjID", "session", "run"), all = T, sort = F)
@@ -261,6 +273,8 @@ cat("\nNumber of excluded blocks because of lacking choice1 variation (cut-off:"
 n_blocks_choice1_var
 cat("\nNumber excluded blocks (cut-off:", 100 * limits.exclude_subject, "%):\n")
 n_blocks_removed
+cat("\nNumber of excluded blocks because of bad training performance:\n")
+n_blocks_bad_training
 ```
 
 ### Preprocessing results
@@ -718,7 +732,7 @@ colnames(logist_regr_data_AICs_long_p)[5] = "p"
 logist_regr_data_AICs_long_p$effect = as.character(logist_regr_data_AICs_long_p$effect)
 logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_cor"] = "cor"
 logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_rep"] = "rep"
-logist_regr_data_AICs_long = merge(logist_regr_data_AICs_long_Chi, logist_regr_data_AICs_long_p, by = c("run", "SubjID", "training", "effect"))
+logist_regr_data_AICs_long = merge(logist_regr_data_AICs_long_Chi, logist_regr_data_AICs_long_p, by = c("run", "SubjID", "training", "effect"), all = T)
 
 gg_logregr_modelfitsdiffs = ggplot(logist_regr_data_AICs_long, aes(effect, Chi_diff)) +
   stat_summary(fun.y = mean, geom = "bar") +
@@ -953,7 +967,7 @@ ts_params$num_par[ts_params$params == "mb"] = 5
 if (do_exclude_trials) {
   
   # Exclude the same subject that have been excluded from behavioral analyses
-  ts_params = merge(ts_params, subset(count_trials, select = -n_trials))
+  ts_params = merge(ts_params, subset(count_trials, select = -n_trials), all = T)
   ts_params = subset(ts_params, !few_trials)
   ts_params$few_trials = NULL
   
