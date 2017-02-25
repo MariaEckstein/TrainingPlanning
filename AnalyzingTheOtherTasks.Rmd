@@ -33,21 +33,27 @@ ToL = read.table("auswertung_alle.txt",
                  sep = " ", na.strings = "",
                  colClasses = c("factor", "factor", "factor", "factor", "numeric", "factor", "factor", "numeric", "factor", "numeric", "factor", "numeric", "numeric", "numeric", "numeric"))
 
-ToL[ToL$SubjID %in% as.character(seq(100,250)),]
-
 ToL$run = substr(ToL$SubjID, 4, 4)
 ToL$run = factor(ToL$run, labels = paste("Run", 1:4))
-ToL$SubjID = substr(ToL$SubjID, 1, 3)
+ToL$SubjID = as.numeric(substr(ToL$SubjID, 1, 3))
 
 ToL$session = ToL$TaskVersion = NULL
   
-ToL = add_performance_columns_ToL()
+ToL = add_performance_columns_ToL()   # Double-checked large numbers of moves in the raw data - everything matches up fine! 
 ToL = add_group_columns(data = ToL)
-plot(ToL$MadeMoves)   # Double-checked large numbers of moves in the raw data - everything matches up fine! 
 summary(ToL)
 write.table(ToL, file = "ToL_data.csv", quote = F, sep = ",", row.names = F)
 ```
-```{r Plot made moves - min & estim moves ~ SubjID, echo = F, warning = F, fig.height = 9, fig.width = 9}
+```{r Plot ToL performance by participant, echo = F, warning = F, fig.height = 9, fig.width = 9}
+
+# Which moves were optimal (minimum number of moves necessary)? Which were longer? 
+gg_subj_moves = ggplot(ToL, aes(SubjID, MadeMoves, color = MadeMoves == MinMoves)) +
+  # stat_summary(fun.data = mean_cl_normal, geom = "point", color = "black") +
+  geom_point(alpha = .5) +
+  coord_cartesian(ylim = c(0, 32)) +
+  labs(y = "# moves for each tower", color = "Optimal solution found") +
+  facet_wrap(~ run)
+gg_subj_moves
 
 # Difference between estimated and executed moves
 gg_made_estim = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
@@ -57,14 +63,31 @@ gg_made_estim = ggplot(ToL, aes(SubjID, Made_minus_EstimMoves)) +
   facet_wrap(~ run)
 gg_made_estim
 
+# How much did each subject go over?
 gg_made_min = ggplot(ToL, aes(SubjID, Made_minus_MinMoves)) +
   stat_summary(fun.y = mean, geom = "bar", fill = "red") +
   geom_point(alpha = .5) +
   labs(x = "Subject ID", y = "Made moves - min moves") +
   facet_wrap(~ run)
 gg_made_min
+
+# In which towers did a subject go over?
+ToL$OptimSolution = ToL$MadeMoves == ToL$MinMoves
+ToL_sum = ddply(ToL, .(SubjID, run, training), summarize, n_optim = sum(OptimSolution))
+
+gg_subj_optim_perf = ggplot(ToL_sum, aes(run, n_optim)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "bar", fill = "red") +
+  geom_point(alpha = .5, position = "jitter") +
+  coord_cartesian(ylim = c(0, 5)) +
+  labs(x = "", y = "# towers solved perfectly") +
+  facet_wrap(~ training)
+gg_subj_optim_perf
 ```
-```{r Plot made moves ~ min moves, echo = F, eval = F}
+```{r Create pad_perf, which will contain summary of behavior in all training tasks, echo = F, message = F, warning = F}
+bad_perf = subset(ToL_sum, select = c("SubjID", "run", "n_optim"))
+colnames(bad_perf)[colnames(bad_perf) == "n_optim"] = "ToL_noptim"
+```
+```{r Plot general aspects of ToL performance, echo = F, eval = F}
 ## Also of interest?
 # The more moves are necessary minimally, the more the deviation in the executed moves
 gg_min_spread = ggplot(ToL, aes(MinMoves, MadeMoves, color = SubjID)) +
@@ -170,16 +193,26 @@ gg_food_over_trials2 = ggplot(food_dat, aes(trial, rew_rec - rew_avail, color = 
 gg_food_over_trials2
 
 sum_food_dat = ddply(food_dat, .(SubjID, run, training, training_s1), summarize,
-                     rew_rec = mean(rew_rec, na.rm = T),
-                     n_cor = mean(n_cor, na.rm = T))
+                     rew_rec = median(rew_rec, na.rm = T),
+                     n_cor = median(n_cor, na.rm = T))
 summary(sum_food_dat)
 
 gg_food_over_trials3 = ggplot(sum_food_dat, aes(run, n_cor, group = 1)) +
-  stat_summary(fun.y = mean, color = "red", geom = "point") +
+  stat_summary(fun.y = median, color = "red", geom = "point") +
   geom_point(alpha = .2, position = "jitter") +
   labs(y = "av. # correct button presses / trial") +
   facet_wrap(~ training)
 gg_food_over_trials3
+```
+```{r Add food perf to bad_perf}
+
+bad_perf = merge(subset(sum_food_dat, select = c("SubjID", "run", "n_cor")),
+                 bad_perf,
+                 by = c("SubjID", "run"),
+                 all = T)
+colnames(bad_perf)[colnames(bad_perf) == "n_cor"] = "food_ncor"
+summary(bad_perf)
+
 ```
 ```{r Food performance by subject, echo = F, message = F, warning = F}
 
@@ -189,11 +222,6 @@ gg_food_by_subj = ggplot(food_dat, aes(SubjID, n_cor, group = SubjID, color = tr
   facet_wrap(~ run)
 gg_food_by_subj
 
-# ddply(sum_food_dat, .(run, training), summarize,
-#       rew_rec = mean(rew_rec, na.rm = T),
-#       sd_rew_rec = sd(rew_rec, na.rm = T),
-#       n_cor = mean(n_cor, na.rm = T),
-#       sd_n_cor = sd(n_cor, na.rm = T))
 ```
 
 # Category tasks
@@ -228,7 +256,6 @@ if (preprocess_data) {
     index = 23
     }
     
-  
     ACC = matrix(exp[[index]][[1]])
     RT = matrix(exp[[index]][[2]])
     length(RT) = length(ACC)
@@ -251,6 +278,7 @@ cat_dat = subset(cat_dat, RT > 150 & !is.na(ACC))
     
 summary(cat_dat)
 head(cat_dat)
+
 ```
 ```{r Cateogry performance over time, echo = F, message = F, warning = F}
 
@@ -269,8 +297,8 @@ gg_cat_over_trials = ggplot(cat_dat, aes(trial, RT / 1000, color = training, gro
 gg_cat_over_trials
 
 sum_cat_dat = ddply(cat_dat, .(SubjID, run, task, training, training_s1), summarize,
-                     ACC = mean(ACC, na.rm = T),
-                     RT = median(RT, na.rm = T))
+                    ACC = mean(ACC, na.rm = T),
+                    RT = median(RT, na.rm = T))
 summary(sum_cat_dat)
 
 gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, 100 * ACC, group = 1, color = task)) +
@@ -280,6 +308,17 @@ gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, 100 * ACC, group = 1, color =
   geom_text(label = "chance", x = 95, y = 20, color = "black") +
   facet_wrap(~ training)
 gg_cat_over_trials3
+```
+```{r Add cat perf to bad_perf, echo = F, message = F, warning = F}
+bad_perf = merge(bad_perf,
+                 subset(sum_cat_dat, task == "ii", select = c("SubjID", "run", "ACC")),
+                 all = T)
+colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "catii_ACC"
+
+bad_perf = merge(bad_perf,
+                 subset(sum_cat_dat, task == "rb", select = c("SubjID", "run", "ACC")),
+                 all = T)
+colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "catrb_ACC"
 
 ```
 ```{r Category performance by subject, echo = F, message = F, warning = F}
@@ -294,124 +333,78 @@ gg_cat_by_subj
 
 ```
 
+# All tasks together
+```{r Add performance evaluation for each task to bad_perf, echo = F, message = F, warning = F}
 
-### 2-step Task:
+# Save final bad_perf to disk
+bad_perf = add_group_columns(bad_perf)
+if (preprocess_data) {
+  bad_perf$ToL_bad = ifelse(bad_perf$ToL_noptim < 2, T, F)
+  bad_perf$food_bad = ifelse(bad_perf$food_ncor < 8, T, F)
+  bad_perf$catii_bad = ifelse(bad_perf$catii_ACC < 0.3, T, F)
+  bad_perf$catrb_bad = ifelse(bad_perf$catrb_ACC < 0.4, T, F)
+  
+  write.csv(bad_perf, file.path(data_dir, "bad_perf.csv"), row.names = F)
+}
 
-+ Read in raw data set as `ts` and parameter data set as `ts_params`; set columns to `numeric` and `factor`
-+ Add columns indicating the subject `group` (model-free training session: `m_free`; model-based training session: `m_based`)
-+ Exclude trials with key perseverations (the same key pressed at least 10 times in a row) 
+bad_perf = read.csv(file.path(data_dir, "bad_perf.csv"))
 
-```{r, echo = F, warning = F}
-# ts = read_in_2step()
-# ts = add_group_columns(data = ts)
-# ts_clean = remove_perseverance_trials(data = ts)[[1]]
-# # write.table(ts, file = "2steptask/Results/all/ts_clean.csv", quote = F, sep = ",", row.names = F)
-# # summary(ts_clean)
+```
+```{r Plot performance in tasks of the same session against each other, echo = F, message = F, warning = F}
+
+# mf
+gg_mftasks = ggplot(bad_perf, aes(food_ncor, 100 * catii_ACC, color = training, group = run)) +
+  geom_point() +
+  labs(x = "Food task (# correct buttons / trial)", y = "Category task ii (% correct trials)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_mftasks
+
+# mb
+gg_mbtasks = ggplot(bad_perf, aes(ToL_noptim, catrb_ACC, color = training, group = run)) +
+  geom_point(alpha = .5) +
+  labs(x = "Tower of London (# optimal solutions / 5)", y = "Category task rb (% correct trials)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_mbtasks
+
+# Excluding participants with bad performance in these tasks: mf
+gg_mftasks = ggplot(subset(bad_perf, !(food_bad | catii_bad)), aes(food_ncor, 100 * catii_ACC, color = training, group = run)) +
+  geom_point() +
+  labs(x = "Food task (# correct buttons / trial)", y = "Category task ii (% correct trials)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_mftasks
+
+# mb
+gg_mbtasks = ggplot(subset(bad_perf, !(ToL_bad | catrb_bad)), aes(ToL_noptim, catrb_ACC, color = training, group = run)) +
+  geom_point(alpha = .5) +
+  labs(x = "Tower of London (# optimal solutions / 5)", y = "Category task rb (% correct trials)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_mbtasks
+
+# Based on run means and sds
+# bad_perf$food_bad = NA
+# bad_perf$cat_bad = NA
 # 
-# ts_params = read_in_2step_parameters()
-# ts_params = add_group_columns(ts_params)
-# # summary(ts_params)
+# for (runi in unique(bad_perf$run)) {
+#   mean_food = mean(subset(bad_perf, run == runi)$food_ncor, na.rm = T)
+#   sd_food = sd(subset(bad_perf, run == runi)$food_ncor, na.rm = T)
+#   outlier_food = subset(bad_perf, run == runi)$food_ncor < mean_food - 2 * sd_food
+#   
+#   for (cati in c("catii_ACC", "catrb_ACC")) {
+#     mean_cat = mean(subset(bad_perf, run == runi)$`cati`, na.rm = T)
+#     sd_cat = sd(subset(bad_perf, run == runi)$`cati`, na.rm = T)
+#     outlier_cat = subset(bad_perf, run == runi)$`cati` < mean_cat - 2 * sd_cat
+#   }
+#   
+#   bad_perf$food_bad[bad_perf$run == runi] = ifelse(outlier_food, T, F)
+#   bad_perf$cat_bad = ifelse((bad_perf$catii_ACC < 0.3) | (bad_perf$catrb_ACC < 0.3), T, F)
+# }
 ```
 
+# End
 
-## Is training performance an additional predictor of how subjects solve the 2-step Task?
-
-### What indicators of performance should we use?
-
-+ Overall hit rate, false alarm rate, d-prime? ("*How well did the subjects perform in the training?*")
-+ Reaction time? ("*Did they perceive the tasks as easy and solve the fluently?*")
-+ Increases in performance over time? ("*How much did they learn through the training? How big was the effect of the training?*")
-
-#### 2-step Task:
-
-+ Money earned?
-+ Number of optimal decisions? (Problem: How to determine that? Based on theoretical probabilities or reward history?)
-
-#### Tower of London:
-
-1.  ***How big was the difference between the number of estimated and executed moves?***  
-    This indicates how good a subject was at making a precise plan and sticking to it.
-    
-2.  ***How many extra moves did the subjects need to solve the problems (above the minimum possible number)?***  
-    This indicates how good a subject was at finding the best possible solution.
-    
-Both measures are plausible as measures of ToL performance and vary between subjects:
-
-
-3.  ***How much did performance increase through the training?***  
-    This indicates how much effect the training had at all on the subjects. Here is the difference in the performance measures above between the first and second run of the Tower of London.
-    
-```{r, echo = F, warning = F, fig.height = 4.5, fig.width = 9}
-# M_based = create_summary_data_frames()[[1]]
-# M_free  = create_summary_data_frames()[[2]]
-# 
-# plot_ToL_diffscores()
+```{r Button to run all chunks}
 ```
-
-
-##### 2-step Task:
-
-1. ***How many coins did the subjects collect overall?***
-
-```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-# source("TP_functions.R")
-# tsTotalACCPlot = plot_ts_perf_total(variable = "reward")
-# tsTotalACCPlot
-```
-
-2. ***How fast were they at responding?***  
-   Response times differ between subjects and seem to be consistent from the 1st to the 2nd run.  
-   They might therefore be a good indicator of performance.
-
-```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-# tsTotalRTPlot = plot_ts_perf_total(variable = "RT")
-# tsTotalRTPlot
-```
-
-3. ***How much did their performance change over the course of the training?***  
-   That is, ... .
-   
-```{r, echo = F, warning = F, fig.height = 9, fig.width = 9}
-
-# GNACCOverTimePlot = plot_labassgn_perf_over_time(data = GN, variable = "ACC", task_name = "GoNogo", section_size = 10)[[1]]
-# GNRTOverTimePlot = plot_labassgn_perf_over_time(data = GN, variable = "RT", task_name = "GoNogo", section_size = 10)[[1]]
-# 
-# grid.arrange(GNACCOverTimePlot, GNRTOverTimePlot, nrow = 2)
-
-```
-
-+ *Rewards and response times _are_ independent*. As expected, there is *no* difference in response time between rewarded and non-rewarded trials:
-
-```{r, echo = F}
-# r0 = with(ts, RT1[reward == "No reward"] + RT2[reward == "No reward"])
-# r1 = with(ts, RT1[reward == "Reward"] + RT2[reward == "Reward"])
-# t.test(r0, r1)
-```
-
-##### Is performance in the tasks related to performance in ToL/GoNogo?
-
-
-
-#### Does good training performance predict good 2-step performance?
-
-+ __Median split__ based on Association, GoNogo, Tower of London, and Labyrinth tasks; does 2-step performance differ?
-+ __Pearson correlation__ between training task performance and 2-step performance?
-+ __Hypothesis__: It might...
-
-#### Does good training performance predict stronger training effects?
-
-+ __Regression__ with the predictors _training_, _session_, and _performace_ on the outcome 2-step _strategy_
-+ __Hypothesis__:
-    + _Main effect of training_: YES! (see above)
-    + _Main effect of performance_: Maybe! The better the performance, the more model-based do they approach the task (Good performance in either training condition might predict model-based strategy? Because that is simply the right way to do the task and subjects are obviously able to do tasks the right way...
-    + _Interaction between training and performance_: YES! Good performance in the planning condition leads to a more model-based strategy; good performance in the association condition leads to a more model-free strategy.
-    + _Interactions with session_: Maybe! (see above)
-    
-### Is meta-cognition and additional predictor of how subjects solve the 2-step task?
-
-* __Regression__ with the predictors _training_ (planning vs. association), _session_, and _metacognition_ on the outcome 2-step _strategy_
-    + __Hypothesis__: The more meta-cognitive introspection, the better the training works because they get the similarities between the tasks and apply it in the new one.
-
-#### What should we use as a measure of meta-cognition?
-
-* Did the subjects mention something in the lines of "model-based"/"model-free" or "goal-directed"/"habitual" or "planning", "strategy"?
