@@ -1,6 +1,7 @@
 \documentclass[11pt]{article} % For LaTeX2e
 \usepackage{rldmsubmit,palatino}
 \usepackage{graphicx}
+\usepackage{amsmath}
 
 \title{Manipulating Model-based and Model-free Reinforcement Learning in Humans}
 
@@ -58,8 +59,6 @@ Reinforcement Learning Model-based Model-free Decision Making
 \acknowledgements{This research was supported by fellowship from the German Academic Exchange Service (DAAD) and by Berkeley's XLab, which provided the testing space and awarded a grant covering participant payment.}  
 
 
-\startmain % to start the main 1-4 pages of the submission.
-
 \section{Questions:}
 \begin{itemize}
 	\item Do the same preprocessing for behavioral and model analysis? (Exclude fast trials (100msec); choice-1 variation; key perseverance; exclude first 20 trials)
@@ -80,6 +79,8 @@ Reinforcement Learning Model-based Model-free Decision Making
 	\item Model with lowest AIC and BIC: lambda == 0 -> use for analyses
 \end{itemize}
 
+\startmain % to start the main 1-4 pages of the submission.
+
 \section{Introduction}
 
 Humans make many decisions every day: Which restaurant to pick for dinner, which book to select for reading, where to go for the weekend. What strategies do humans use to make such decisions? In the behaviorist tradition of psychology (Skinner, Watson, Pavlov), researchers have contended that all observed behavior, ranging from button pressing in rats to language production in humans, can be explained conditioned responses elicited by specific stimuli (Skinner, 1977). In this view, all behavior is the product of shaping, in which the reward characteristics of the environment lead to the formation of stable stimulus-response associations. According to this view, we pick a restaurant where we have had good experiences so far. Cognitive psychologists, on the other hand, contend that humans and animals possess internal representations of their environment and are able to reason about causal relationships and contingencies (Tolman, 1948). In the cognitivist view, agents choose specific actions based on mental simulations of their likely consequences. In this view, we pick a restaurant that leads to the best result in our mental simulation, based on our world knowledge.
@@ -88,98 +89,78 @@ These two opposing characterizations of decision making, behaviorist and cogniti
 
 Bringing psychology and machine learning together, past research has shown that human and animal behavior can be modeled through reinforcement learning. A major finding concerns the striking similarity between activity in the dopamine system, the brain's "reward system" (Wise, 1982), and the occurrence of reward prediction errors as specified in reinforcement learning (Schultz, 1997). More recently, researchers have sought to differentiate model-based and model-free decision strategies in humans and to determine whether different brain regions underlie each. Model-free decision making, fast and low in cognitive demand, increases when time and/or cognitive resources are sparse, for example during stress (Schwabe \& Wolf, 2011) or when multi-tasking (Otto, Gershman, Markman, \& Daw, 2013). The brain regions involved in model-free decision making include subcortical regions and the ventral striatum (Dolan \& Dayan, 2013). On the other hand, no situations have yet been identified that increase model-based decision making, although some brain regions underlying these processes have been identified (frontal cortex and dorsal striatum; Dolan \& Dayan, 2013). The only study that has shown an increase in model-based decision making was a pharmacological manipulation of dopamine levels (Wunderlich, Smittenaar, \& Dolan, 2012). 
 
-In the current study, we therefore sought to investigate whether a cognitive intervention would increase model-based decision making in human participants. We hypothesized that decision strategies are influenced by prior cognitive activities. Forward-planning and mental simulation should influence model-based decisions, whereas habitual, reward-driven behavior should influence model-free decisions. This influence could go either way, fostering (cognitive enhancement hypothesis) or depressing (cognitive depletion hypothesis) the decision strategy. An increase in model-based decision making after model-based activities would support the cognitive enhancement hypothesis; an increase of model-based decision making after model-free activities would support the cognitive depletion hypothesis.
+In the current study, we therefore sought to investigate whether a cognitive intervention would increase model-based decision making in human participants. We hypothesized that decision strategies are influenced by prior cognitive activities. Forward-planning and mental simulation should influence model-based decisions, whereas habitual, reward-driven behavior should influence model-free decisions. This influence could go either way, fostering (cognitive enhancement hypothesis; CITE Jaeggi?) or depressing (cognitive depletion hypothesis; CITE) the decision strategy. An increase in model-based decision making after model-based activities would support the cognitive enhancement hypothesis; an increase of model-based decision making after model-free activities would support the cognitive depletion hypothesis.
 
-In order to rule out alternative explanations of such changes, we also included a control group, which received cognitive tasks that were not related to (model-based or model-free) decision making. In this group, we expected to see naturally occurring changes in decision making when tested multiple times. 
+In order to rule out alternative explanations of such changes, we also included a control group who received cognitive tasks that were not related to (model-based or model-free) decision making. This group was supposed to reveal how decision strategies naturally evolve over time in humans tested multiple times on the same task. We pre-registered these hypotheses on the Open Science Framework prior to data collection (www.osf.io/).
 
-These hypotheses were pre-registered on the Open Science Framework prior to data collection (www.osf.org/...).
+\begin{figure}
+	\includegraphics[width=\linewidth]{TrainingTasks.png}
+	\label{TrainingTasks}
+\end{figure}
 
 \section{Methods and Results}
 \subsection{Study Design}
 
-We designed the following cognitive intervention based on our hypotheses: We asked 116 participants to take part in a two-session experiment, with the session taking place two days apart. We assessed participants' decision strategies using Daw et al.'s 2-step task at the beginning and end of each session, i.e., four times in total. Participants were randomly assigned to one of five groups. The control group engaged in the same two control tasks during the first and second session, a number comparison task (cite), and an orientation-discrimination task (cite). The model-based group (MB-MB) received the Tower of London task (cite) and a rule-based category task (Ashby \& Maddox) during both sessions and the model-free group (MF-MF) received an operant condition task (cite) and an information-integration category (cite) task in both sessions. The last two groups of participants were mixed: the MB-MF group received the tasks of the MB-MB group in the first session, and of the MF-MF group in the second session. The opposite was true for the MF-MB group. The analyses presented here focus on the first three 2-step assessments and collapse over the MB-MB and MB-MF groups, who had only received the model-based intervention up to that point. Likewise, we collapses over the MF-MF and MF-MB groups who had only engaged the model-free tasks yet.
-
-In each trial of the 2-step task, with which we assessed model-based and model-free behavior, participants select one of two stimuli in the first stage (e.g., blue vs green). Depending on the selected stimulus (e.g., green), participants are then presented with a second binary decision (e.g., red vs yellow stimulus). The second choice determines whether participants are rewarded or not. Each stimulus in the second stage is associated with a certain, independent reward probability (which slowly changes over time). Crucially, the link between first-stage choice and second-stage pair is probabilistic, rather than deterministic. In our example, selecting the green stimulus in the first stage would lead to the read-vs-yellow stage in 70\% of cases, but to a different, e.g., pink-vs-purple stage in 30\% of the trials. The opposite would be true for the blue stimulus in the first stage.
-
-In this task, a model-free agent learns the values of each first-stage stimulus by averaging the rewards obtained after selecting this stimulus. It does not discriminate between common and rare transitions between the first and second stage. A model-based agent, on the other hand, selects actions based on its knowledge about the structure of the task, including common and rare transitions, and therefore differentiates between common and rare transitions.
-
-\subsection{Behavioral Switch-Stay Analysis}
-Participants' decision making strategies in the 2-step task can be analyzed in two ways: Classical behavioral analyses assess whether participants differentiate between common and rare transitions. RL modeling tests for model-based and model-free learning explicitly by fitting the corresponding models to the human data.
-
-Before the analyses, we cleaned the behavioral data, using standard procedures. We excluded trials, which were part of a streak in which participants pressed the same key more than 15 times in a row (the presentation side of the stimuli switched randomly). An average of 17.7 out of 180 trials was excluded per subject. We then excluded trials in which participants responded faster than 100 msec. An average 11.2 trials per subject was excluded. Whole blocks of data were excluded when participants selected the same first-stage stimulus in more than 95\% of trials, which would otherwise lead to problems with the statistical techniques (17 blocks were excluded). Finally, blocks were excluded in which more than 75\% of the data had been removed during cleaning (81 blocks). The resulting data contained 332 blocks from 109 participants.
-
-We first used the behavioral approach to analyze the data. We assessed participants' tendencies to repeat first-stage decisions after receiving rewards. As explained above, a model-free agent would repeat a rewarded action irrespective of whether it was followed by a common or rare transition. A model-based agent, on the other hand, would consider picking to other first-stage action after a rewarded rare transition because in this case, the probability of achieving the same outcome is higher when the opposite first-stage action is chosen. Figure \ref{Fig1} A shows that all three groups of participants tended to repeat rewarded actions more often than unrewarded actions, a sign of model-free behavior. This effect was statistically significant, as revealed by the main effect of reward on staying in most groups and runs (Figure \ref{Fig1} B), revealed by logistic, mixed-effects regression using the lme4 package (cite) in R (cite). Besides this model-free component, participants also showed model-based decision making in that they differentiated between common and rare transitions. This was reflected in the interaction between reward and transition in some of the regression models (Figure \ref{Fig1} B).
+116 participants took part in a two-session experiment (sessions 2 days apart). We assessed participants' decision strategies at the beginning and end of each session, i.e., four times in total. Participants were randomly assigned to one of five groups: control, MB-MB, MF-MF, MB-MF, or MF-MB. The control group received the control tasks in both sessions, MB-MB received model-based tasks in both sessions, MF-MF received model-free in both sessions, MB-MF received model-based in the first and model-free in the second session and MF-MB in reversed order. The tasks are shown in Table 1. We present the effects of the first session here, collapsing groups with the same tasks, i.e., combining MB-MB and MB-MF and combining MF-MF and MF-MB.
 
 \begin{figure}
-	\includegraphics[width=\linewidth]{Fig1ab.png}
-	\caption{bla.}
-	\label{Fig1}
+	\includegraphics[width=\linewidth]{TwoStepab.png}
+	\caption{Two-step task (A) and results (B). (A) In the first state $s_{1}$ participants decide between two actions. One action is followed by state $s_{2a}$ most of the time ("common transition"), the other one by state $s_{2b}$. In state $s_{2}$ participants again decide between two actions and receive a reward with probability determined by $a_{2}$. Reward probabilities change over time to ensure continued learning. (B) Participants' probability of repeating last trial's $a_{1}$ ("s1 stay probability"), as a function of reward and transition in the previous trial.}
+	\label{TwoStep}
 \end{figure}
 
-We next tested for differences in decision making between groups, but the regression models revealed no significant differences. There were no interactions at any time point between reward and group, which would have indicated differences in the model-free component (stats). Nor were there interactions between reward, transition, and group, which would have indicated differences in the model-based component (Run 1: group* reward, p = 0.55, ...). Lagged regression models (cite) and logistic regression model on the individual data supported this conclusion.
+We assessed decision strategies using Daw et al.'s (cite) 2-step task. The task involves two binary decisions, whereby the second set of choices is statistically contingent on participants' first decision (see Figure \ref{TwoStep}). Model-based and model-free strategies lead to different decisions in this task. A model-free agent learns the values of a state-one action $a_{1}$ by averaging the rewards obtained in all trials, in which $a_{1}$ was selected. The model-free agent does therefore not discriminate between common and rare transitions. A model-based agent, on the other hand, selects $a_{1}$ based on its knowledge about the structure of the task, reasoning which $a_{1}$ most likely leads to the $s_{2}$ with the most-rewarded action. A model-based agent therefore assigns values differently after common and rare state transition.
+
+\subsection{Behavioral Switch-Stay Analysis}
+Participants' decision making strategies in the 2-step task can be analyzed in two ways. Behavioral analyses assess the influence of past rewards on participants' subsequent decisions (model-free characteristic) and they asses whether participants differentiate between common and rare transitions (model-based characteristic). RL modeling tests for model-based and model-free decisions explicitly by fitting RL models to the human data and estimating the weight of model-based and model-free decision making.
+
+Before the analyses, we cleaned the data using standard procedures. One dataset of 331 was excluded because only one button was pressed throughout the task. 13 datasets were removed because the same $a_{1}$ was selected in more than 95\% of trials. All trials were removed in which participants responded faster than 100 msec (average 8\% per participant) and 14 complete datasets were excluded because more than 75\% of the trials had been removed. The resulting data contained 303 datasets from 114 participants.
+
+We first analyzed the 2-step task behaviorally (see Figure \ref{TwoStep}B). Participants tended to repeat rewarded actions more often than unrewarded actions, a sign of model-free behavior. This effect was statistically significant in all runs in the MF and MB groups, but in no run in the control group, as revealed by main effects of reward in the previous trial on staying in logistic mixed-effects regression models, INSERT STATS. Besides this model-free component, participants also showed model-based decision making in that they differentiated between common and rare transitions. This was reflected in the interaction between reward and transition in runs 2 and 3 in the control group, run 2 in the MB group, and runs 2 and 3 in the MF group (although the pattern was reversed in run 3, so should not be taken as support for a model-based strategy), STATS. We then tested for differences between groups, using interaction contrasts. We found that the model-free component did not differ between groups in any run, revealed by non-significant interactions between reward and group, STATS. The model-based component, on the other hand, differed in run 3, as revealed by a significant interaction between reward, interaction, and group, STATS.
+
+Taken together, the control group showed a combination of model-based and model-free behavior in runs 2 and 3, whereas the MB and MF groups showed model-free behavior in all runs and only had an additional model-based component in the second run. These analyses were supported by regression models that modeled the influence of outcomes further in the past and by logistic regression models on individual participants (not shown). The results were also similar when 
 
 \subsection{RL Modeling Analysis}
-We next employed classical RL models to assess participants' decision process in more detail. In the models, agents chose actions $a$ based on internally-represented action values $Q$. Action values indicate how much reward an agent expects from choosing an action. In order to learn action values, agents observe the outcome of each trial (reward $R = 1$ or $R = 0$) and update the value $Q(s', a')$ of the selected second-stage action $a'$ in the second stage $s'$, in the following way:
+We next assessed participants' decision process using RL modeling. We first specified a hybrid model, in which agents determine action values by combining model-based and model-free value estimates. We then fit this model to each participant's actions by selecting parameter values that maximized the likelihood of the actions under the model. The parameter $w$, which determined the weight of model-based and model-free value estimates, was used to assess participants' decision strategy.
+
+Our model was similar to the ones previously described for the 2-step task (CITE). In specific, agents updated action values $Q$ for actions $a_{2}$ available in the second stage by observing the trial outcome (reward $R = 1$ or $R = 0$), as follows:
 
 \begin{equation}
-Q(s', a') = Q(s', a') + \alpha' \cdot RPE,
-\end{equation}
-\begin{equation}
-RPE = R - Q(s', a')
+Q(s_{2}, a_{2}) = Q(s_{2}, a_{2}) + \alpha_{2} \cdot RPE,
 \end{equation}
 
-where $ \alpha' $ is an agent's learning rate, specific to learning of second-stage action values. Having updated the value $Q(s', a')$ of the selected second-stage action, agents then update the values $Q(s, a)$ of first-stage actions. Model-free agents do the following:
+whereby the reward prediction error $RPE = R - Q(s_{2}, a_{2})$ and $\alpha_{2}$ is the agent's learning rate for the second state.
 
-\begin{equation}
-Q_{mf}(s, a) = Q_{mf}(s, a) + \alpha \cdot (VPE + \lambda \cdot RPE)
-\end{equation}
-\begin{equation}
-VPE = Q(s', a') - Q_{mf}(s, a)
-\end{equation}
-
-The value of the first-stage action depends on the reward prediction error (RPE) and a value prediction error (VPE), the difference between the value (i.e., expected reward) of the first action and the value of the received second state. The weight of the RPE for first-stage updating was determined by $ \lambda $, a temporal discounting factor. A model with $ \lambda = 0 $ was the best-fitting model for our participants, so only differences in values were taken into account in first-stage action updating, not rewards.
-
-Model-based agents determined the values of first-stage actions based on their internal predictive model, taking into account their known transition probabilities $p(s', a, s)$ between state $s$ and state $s'$, when choosing action $a$:
+The update of first-stage action values $Q(s_{1}, a_{1})$ differed between model-based and model-free agents. Model-free agents used the outcome of $a_{1}$ to update $a_{1}$'s value, i.e., the value of the action chosen in $s_{2}$ and the trial's ultimate outcome ($R = 1$ or $R = 0$).
 
 \begin{equation}
-Q_{mb}(s, a) = \sum_{s'} p(s', a, s) \cdot max(Q(s', a'))
+Q_{mf}(s_{1}, a_{1}) = Q_{mf}(s_{1}, a_{1}) + \alpha_{1} \cdot (VPE + \lambda \cdot RPE),
 \end{equation}
 
-Model-based agents therefore updated first-stage values by calculating the expected rewards from each action, given the transition probabilities between first and second states.
+whereby the value prediction error $VPE = Q_{mf}(s_{2}, a_{2}) - Q_{mf}(s_{1}, a_{1})$ and The weight of the RPE for first-stage updating was determined by $ \lambda $, a temporal discounting factor. The model with $\lambda = 1$ was the best-fitting model for our participants, suggesting that participants weighted RPEs equally strong as VPE when updating action values $Q_{mf}(s_{1}, a_{1})$.
 
-We modeled participants as hybrid agents who combined model-based and model-free value estimates for first-stage actions:
+Model-based agents determined the values of first-stage actions $a_{1}$ based on their internal predictive model, taking into account the transition probability $p(s_{2}, a_{1}, s_{1})$ between state $s_{1}$ and state $s_{2}$, when choosing action $a_{1}$:
 
 \begin{equation}
-Q_{hyb}(s, a) = (1 - w) \cdot Q_{mf}(s, a) + w \cdot Q_{mb}(s, a)
+Q_{mb}(s_{1}, a_{1}) = \sum_{s_{2}} p(s_{2}, a_{1}, s_{1}) \cdot max(Q(s_{2}, a_{2}))
 \end{equation}
 
-The parameter $w$ determines the weight of model-based and model-free values to determine the value of the first-stage action, which the agent used to select the action.
+Agents combined model-based and model-free value estimates using a weighted average, $Q_{hyb}(s_{1}, a_{1}) = (1 - w) \cdot Q_{mf}(s_{1}, a_{1}) + w \cdot Q_{mb}(s_{1}, a_{1})$, whereby the parameter $w$ determined the weight of model-based versus model-free values. Agents selected actions $a$ according to a softmax decision rule, which took into account the actions' values $Q(s, a)$, but also whether the same action was taken in the previous trial (choice perseverance $p$) and whether the same key was pressed in the previous trial (key perseverance $k$). The inclusion of key perseverance is the only difference to previous models and improved the model fit significantly. Individuals' softmax temperature with respect to action values $Q(s, a)$ was determined by parameters $\beta_{1}$ and $\beta_{2}$ for the fist and second state. We validated our model by simulating agents with different parameter values and subsequently recovering these parameters (data not shown). We also confirmed that reduced models, with certain parameters fixed, were best recovered by models with the same free parameters, rather than different models. 
 
-Agents selected actions $a$ and $a'$ in the following way, based on their action values $Q(s, a)$ and $Q(s', a')$:
+\begin{figure}
+	\includegraphics[width=0.5\linewidth]{gg_params_s1.png}
+	\caption{Results of the RL analysis. Means and standard errors of model parameters fitted to individuals' datasets.}
+	\label{Params}
+\end{figure}
 
-\begin{equation}
-P(a|s) = \frac{exp(\beta \cdot Q(s, a) + k \cdot K + p \cdot P)}{\sum_{i} exp(\beta \cdot Q(s, a_{i}) + k \cdot K + p \cdot P)}
-\end{equation}
-
-$\beta$ is the agent's individual softmax temperature. $\beta$ determines whether the agent will always choose the action with the highest value, or explore both actions more equally. Different values of $\beta$ were allowed for the first and second state ($\beta$ and $\beta'$). Besides action values, participants action selection was also determined by whether the same action was chosen in the previous trial ($P$) and whether the same key was pressed in the previous trial ($K$). The weight of these factors were determined by weights $p$ and $k$, which varied by agent. The model fit only improved with the inclusion of choice perseverance $P$, but not key perseverance $K$, 
-Explain keyrep and fracrep.
-
-We validated our model by simulating agents with different parameters, and subsequently recovering these parameters (data not shown). We also confirmed that reduced models, with certain parameters fixed, were best recovered by models with the same free parameters, rather than different models. 
-
-Having confirmed the validity of our model, we next aimed to characterize human performance in terms of the free parameters of the model---learning rates alpha1 and alpha2, decision temperature beta1 and beta2, future discounting lambda, key perseverance k, choice perseverance p, and balance between model-based and model-free decision making w. To this aim, we first determined if a simplified model fit the behavioral data better than the full model. Indeed, the Bayesian Information Criterion (BIC) was lower for a reduced model with only 5 parameters---keeping key perseverance at k = 0 and discounting lambda at 0.
-
-We then fit the simplified model to individual participants' behavior. To this aim, we selected the free parameters such that the likelihood of the participant's responses was maximized. We used Matlab's fmincon function with 30 different start values to find the best-fitting parameter values for each participant, minimizing the negative log of the likelihood. Each participant's data were thereby associated with a specific set of parameters, characterizing this participant's behavior. The results are shown Figure 3. We found that, contrary to our expectations but in line with the behavioral analyses, different training tasks did not lead to differences in w, the balance between model-based and model-free decisions. 
-
-On an individual subject level, we found changes between assessments, but nothing consistent for the whole group.
+We then aimed to characterize human performance in terms of the model parameters---learning rates $\alpha_{1}$ and $alpha_{2}$, decision temperature $beta_{1}$ and $beta_{2}$, key perseverance $k$, choice perseverance $p$, and crucially the balance between model-based and model-free decision making $w$. When fitting the model to human data, the Bayesian Information Criterion (BIC) and Akaike Information Criterion (AIC) were lowest for a reduced model with 7 free parameters, fixing future discounting $\lambda$ at 1, as revealed by sign rank tests, STATS. Matlab's fmincon function was used with 30 different start values to find the best-fitting parameters for each dataset. The results (Figure \ref{Params}) show that $w$ increased slightly in run 2 in the control and MF group, in accordance with the behavioral analyses. Nevertheless, this effect was not statistically significant in a regression model testing for effects of group and run on $w$.
 
 \section{Conclusion}
-We present the results of a study aimed at investigating factors that influence human decision making. In specific, we aimed to test whether the use of model-based versus model-free strategies depended on previous cognitive activities, such that engagement in mental simulation and forward planning would facilitate model-based decision strategies, whereas habitual, reward-driven, stimulus-response behavior would promote model-free decision making. We selected tasks with these cognitive components that had also been (excessively) studied using functional magnetic resonance imaging (fMRI), so that we can conclude that the model-based set of tasks (ToL, rb category) engaged brain regions that have been associated with model-based decision making, whereas the model-free tasks engaged brain regions associated with model-free decision making. 
+We present the results of a study aimed at investigating factors that influence human decision making. In specific, we aimed to test whether the use of model-based versus model-free strategies depended on previous cognitive activities, such that engagement in mental simulation and forward planning would influence model-based decision strategies, whereas habitual, reward-driven, stimulus-response behavior would influence model-free decision making. We found a slight, despite non-significant increase in model-based decision making after cognitive tasks unrelated to model-based decision making, supporting the cognitive depletion hypothesis, which states that cognitive activities are depleted upon use. The biggest differences seemed to arise between the control group and the two decision making groups MB and MF (switch-stay analysis), where participants unexpectedly favored common over rare transitions, an effect unrelated to model-based or model-free decision making. This suggests that the results of the RL modeling should be taken with a grain of salt.
 
-Our study revealed no influence of the cognitive intervention tasks on decision making. This can not be attributed to limited power because the samples size (25 participants per group) had been determined based on a power analysis in a pilot sample, which had shown promising results. 
+One reason for this negative results might be that the carry-over from previous cognitive activities did not last long enough to determine the strategy in the whole 2-step task (approximately 20 minutes). Lastly, there were a differences between the design of the pilot study, which revealed strong effects of short-term cognitive depletion and long-term cognitive enhancement. Namely, participants only did the 2-step task twice in the pilot study, at the end of each session, and the training of the 2-step task was interleaved with the training tasks. In the current study, the 2-step task was the first task of all, before the training. The effect might be weaker because of that. Maybe it only works when participants have not seen the 2-step before the cognitive intervention.
 
-Instead, the results suggest that previous cognitive activities do not influence subsequent decision making---at least at the scale of the duration of the 2-step task (approximately 15 minutes???). It is possible that carry-over effects from previous tasks exist on a shorter time scale, but we are not aware of a shorter test of decision making strategy than the used 2-step task. Lastly, the discrepancy between the pilot data, in which there were hints of an effect, and the current study might also arise from the fact that participants did the 2-step task 4 versus 2 times. Maybe it only works when you have never seen it before.
-
-Concluding, research into the manipulation of model-based and model-free decision strategies is of great relevance. Model-free decisions are often short-sighted and suboptimal on the long term (the chocolate cake). Model-based decisions require more effort but can lead to better long-term outcomes. Many vulnerable subjects, including persons with ADHD, depression, schizophrenia, Parkinson's disease, obesity, impulsitiy, eating disorders, or addiction would benefit from a cognitive intervention that facilitates model-based decision making and creates some ease in selecting and switching between both strategies, according to the context.
+Concluding, research into the manipulation of model-based and model-free decision strategies is of great relevance. Model-free decisions are often short-sighted and suboptimal in the long term (eating the chocolate cake). Model-based decisions (preparing for an exam) require more effort but often to better long-term outcomes when knowledge about environmental contingencies are relevant. Many vulnerable subjects, including persons with ADHD, depression, schizophrenia, Parkinson's disease, obesity, impulsitiy, eating disorders, or addiction would benefit from a cognitive intervention that facilitates model-based decision making and creates some ease in selecting and switching between both strategies, according to the context.
 
 \section{References}
 
