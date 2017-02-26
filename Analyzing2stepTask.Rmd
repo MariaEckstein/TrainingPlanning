@@ -893,9 +893,11 @@ ts_params$num_par[ts_params$params == "hyb"] = 8
 ts_params$num_par[ts_params$params == "mf"] = ts_params$num_par[ts_params$params == "l0"] = ts_params$num_par[ts_params$params == "l1"] = ts_params$num_par[ts_params$params == "nop"] = ts_params$num_par[ts_params$params == "nok"] = ts_params$num_par[ts_params$params == "b20"] = 7
 ts_params$num_par[ts_params$params == "a1b1"] = ts_params$num_par[ts_params$params == "nopk"] = 6
 ts_params$num_par[ts_params$params == "mb"] = 5
+summary(ts_params)
 ```
-```{r Exclude bad subjects, echo = F}
+```{r Exclude bad subjects, echo = F, message = F, warning = F}
 
+ts_params = add_group_columns(ts_params)
 if (do_exclude_trials) {
   
   # Exclude the same subject that have been excluded from behavioral analyses
@@ -910,17 +912,16 @@ if (do_exclude_trials) {
   ts_params = merge(ts_params, bad_perf, all.x = T)
   ts_params = subset(ts_params, (is.na(ToL_bad) | !ToL_bad) & (is.na(food_bad) | !food_bad) & (is.na(catii_bad) | !catii_bad) & (is.na(catrb_bad) | !catrb_bad))
 }
-
 summary(ts_params)
 
-### Beautify ts_params
-ts_params = add_group_columns(ts_params)
+# Melt ts_params
 ts_params_molten = melt(ts_params, id.vars = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "AIC"))
 colnames(ts_params_molten) = c("SubjID", "session", "run", "training", "training_s1", "params", "num_par", "BIC", "AIC", "parameter", "estimate")
 ts_params_molten$parameter = as.factor(ts_params_molten$parameter)
 ts_params_molten$estimate  = as.numeric(as.character(ts_params_molten$estimate))
 ts_params_molten$params    = as.factor(ts_params_molten$params)
 ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
+summary(ts_params_molten)
 ```
 ```{r Prepare relative BICs, echo = F}
 
@@ -984,6 +985,10 @@ gg_rel_BIC = ggplot(subset(rel_BIC_molten, run != "Run 4"), aes(variable, value)
   labs(x = "", y = "model BIC - hyb BIC")
 gg_rel_BIC
 
+gg_rel_BIC_run = gg_rel_BIC +
+  facet_grid(~ run)
+gg_rel_BIC_run
+
 gg_rel_AIC = ggplot(subset(rel_AIC_molten, run != "Run 4"), aes(variable, value), group = SubjID) +
   geom_hline(yintercept = 0) +
   geom_point(position = "jitter", alpha = 0.2) +
@@ -991,17 +996,19 @@ gg_rel_AIC = ggplot(subset(rel_AIC_molten, run != "Run 4"), aes(variable, value)
   labs(x = "", y = "model AIC - hyb AIC")
 gg_rel_AIC
 
-gg_rel_BIC_run = gg_rel_BIC +
+gg_rel_AIC_run = gg_rel_AIC +
   facet_grid(~ run)
-gg_rel_BIC_run
+gg_rel_AIC_run
 
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_model_BIC.png"), gg_model_BIC, width = 10, height = 5)
   ggsave(file.path(figure_dir, "gg_rel_BIC.png"), gg_rel_BIC, width = 10, height = 5)
   ggsave(file.path(figure_dir, "gg_rel_BIC_run.png"), gg_rel_BIC_run, width = 15, height = 10)
+  ggsave(file.path(figure_dir, "gg_rel_AIC_run.png"), gg_rel_AIC_run, width = 15, height = 10)
 }
 ```
 ```{r Calculate binonimal / sign tests to find best BICs / AICs, echo = F}
+
 # BIC stats
 ## mb
 mb_total = sum(!is.na(rel_BIC$mb))
@@ -1040,10 +1047,7 @@ binom.test(l1_better, l1_total)   # ***
 ```
 ```{r Plot parameters by training and run, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
-# Add training column
 selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
-
-### Plot
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
 
 x = 0; y = 1
@@ -1059,7 +1063,13 @@ gg_params_s1
 gg_params = gg_params_s1 +
   facet_grid(training ~ run)
 
-# Stats (w ~ run * training)
+if (ggsave_figures) {
+  ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
+  ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
+}
+```
+```{r Regression model w ~ run * training, echo = F}
+
 mod_dat = subset(selected_parameter_dat, run != "Run 4" & parameter == "w" & !is.na(estimate))
 mod_dat$run = factor(mod_dat$run)
 mod_dat$SubjID = factor(mod_dat$SubjID)
@@ -1074,11 +1084,6 @@ params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
      na.action = na.omit,
      REML = F)
 summary(params_mod)
-
-if (ggsave_figures) {
-  ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
-  ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
-}
 ```
 ```{r Calculate parameter changes from run 1 to runs 2 and 3, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
 
@@ -1133,6 +1138,12 @@ gg_param_changes_s1
 gg_param_changes = gg_param_changes_s1 +
   facet_grid(training ~ runs)
 
+if (ggsave_figures) {
+  ggsave(file.path(figure_dir, "gg_param_changes_s1.png"), gg_param_changes_s1, width = 5, height = 5)
+  ggsave(file.path(figure_dir, "gg_param_changes.png"), gg_param_changes, width = 9, height = 5)
+}
+```
+```{r Regression model on relative parameter data, echo = F}
 ## Stats (w ~ training * run)
 plot_dat$runs = factor(plot_dat$runs)
 contrasts(plot_dat$runs) = c(-1, 1)
@@ -1143,10 +1154,6 @@ params_rel_mod = lmer(estimate ~ training_s1 * runs + (1 | SubjID),
                       REML = F)
 summary(params_rel_mod)
 
-if (ggsave_figures) {
-  ggsave(file.path(figure_dir, "gg_param_changes_s1.png"), gg_param_changes_s1, width = 5, height = 5)
-  ggsave(file.path(figure_dir, "gg_param_changes.png"), gg_param_changes, width = 9, height = 5)
-}
 ```
 ```{r Relation between training tasks and 2-step, echo = F}
 
