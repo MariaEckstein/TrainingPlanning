@@ -37,9 +37,12 @@ classdef Real_data < Dataset
             if self.data_year == 2015
                 agentID =  file_name(8:9);
                 runID = 2 * str2num(file_name(10));   % reason for '2 *': participants only played 2-step twice, at the end of each session. that corresponds to runs 2 and 4 in the new data
-            else
+            elseif self.data_year == 2016
                 agentID =  file_name(length(file_name)-9:length(file_name)-7);
                 runID = file_name(length(file_name)-4);
+            else
+                agentID = num2str(i_dataset);
+                runID = 1;
             end
             agentID = str2double(agentID);
             switch runID
