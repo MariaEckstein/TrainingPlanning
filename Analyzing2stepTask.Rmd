@@ -366,7 +366,6 @@ if (preprocess_data) {
   contrasts(ts$reward_prev_trial) = c(1, -1)
   contrasts(ts$transi_prev_trial) = c(1, -1)
   contrasts(ts$repeat_first_key) = c(-1, 1)
-  contrasts(ts$run) = contr.poly(4)
   contrasts(ts$training_s1) = cbind(c(-2, 1, 1), c(0,-1, 1))
   
   # Logistic regression separately for each group and run (Stay ~ 1 + reward * transition)
@@ -454,6 +453,10 @@ if (preprocess_data) {
   
   # Complete model (Stay ~ 1 + reward + transition + reward:transition + reward:training + reward:transition:training + reward:run + reward:transition:run)
   model_dat = subset(ts, !is.na(reward_prev_trial) & run != "Run 4")
+  model_dat$run = factor(model_dat$run)
+  r1_vs_r23 = c(-2, 1, 1)
+  r2_vs_r3 = c(0, -1, 1)
+  contrasts(model_dat$run) = cbind(r1_vs_r23, r2_vs_r3)
   
   # SMall model
   mod = glmer(stay_first_stage ~ reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
@@ -464,7 +467,7 @@ if (preprocess_data) {
 
   # Full model
   mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
-                (reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
+                (repeat_first_key + reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
       family = binomial, control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6)),
       data = model_dat)
   switch_stay2 = cbind(coefficients(summary(mod)), "key+rew*tra*gro*run", summary(mod)$AICtab[1], summary(mod)$AICtab[2])
@@ -1069,7 +1072,7 @@ x = 0; y = 1
 gg_params_s1 =
   ggplot(subset(selected_parameter_dat, run != "Run 4"), aes(parameter, estimate, color = parameter != "w")) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  geom_point(position = "jitter", alpha = .2) +
+  # geom_point(position = "jitter", alpha = .2) +
   labs(x = "", y = "Parameter estimates", fill = "") +
   coord_cartesian(ylim = c(0, 1)) +
   facet_grid(training_s1 ~ run) +
