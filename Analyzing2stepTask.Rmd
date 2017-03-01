@@ -1069,7 +1069,7 @@ x = 0; y = 1
 gg_params_s1 =
   ggplot(subset(selected_parameter_dat, run != "Run 4"), aes(parameter, estimate, color = parameter != "w")) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  # geom_point(position = "jitter", alpha = .2) +
+  geom_point(position = "jitter", alpha = .2) +
   labs(x = "", y = "Parameter estimates", fill = "") +
   coord_cartesian(ylim = c(0, 1)) +
   facet_grid(training_s1 ~ run) +
