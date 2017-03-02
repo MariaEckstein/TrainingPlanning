@@ -80,7 +80,7 @@ Finally, the control tasks were unrelated to MB or MF decision making: The numbe
 
 \begin{figure}
 	\includegraphics[width=\linewidth]{TwoStepab2.png}
-	\caption{Experimental procedure (A) and 2-step task (B). (A) In session 1, participants' decision strategies were assessed using the 2-step task, then of the three cognitive interventions followed, then participants did the 2-step task again. Two days later, participants came in for session 2 and did a third assessment of the 2-step task. (B) 2-step task: each trial has two successive states, $s_{1}$ and $s_{2}$. In $s_{1}$, participants decide between two actions $a_{1}$ (blue vs pink). One choice (e.g. blue) is followed by state $s_{2a}$ most of the time ("common transition"), the other one (pink) by state $s_{2b}$. In state $s_{2}$ participants decide between two actions and receive a reward with probability $P(R|a_{2})$ determined by $a_{2}$. Reward probabilities change over time to ensure continued learning.}
+	\caption{Experimental procedure (A) and 2-step task (B). (A) as described in the main text. (B) 2-step task: each trial has two successive states, $s_{1}$ and $s_{2}$. In $s_{1}$, participants decide between two actions $a_{1}$ (blue vs pink). One choice (e.g. blue) is followed by state $s_{2a}$ most of the time ("common transition"), the other one (pink) by state $s_{2b}$. In state $s_{2}$ participants decide between two actions and receive a reward with probability $P(R|a_{2})$ determined by $a_{2}$. Reward probabilities change over time to ensure continued learning.}
 	\label{TwoStep}
 \end{figure}
 
@@ -96,7 +96,7 @@ In summary, the control group showed predominantly MB behavior in runs 2 and 3. 
 \subsection{RL Modeling Analysis}
 The previous analyses model choices based on the characteristics of a single previous trial. We followed these analyses up with computational modeling to assess participants' decision strategies as a mixture of long-term MB vs. MF reinforcement learning (\cite{sutton_reinforcement_2017}). We specified a hybrid model, in which agents determine action values by combining MB and MF value estimates. We then fit this model to each participant's actions by selecting parameter values that maximized the likelihood of the actions under the model. The parameter $w$, which determines the weight of MB and MF value estimates, was used to assess participants' decision strategy.
 
-Our model was similar to the ones previously described for the 2-step task (\cite{wunderlich_dopamine_2012}). In specific, agents updated action values $Q$ for actions $a_{2}$ available in the second stage by observing the trial outcome (reward $R = 1$ or $R = 0$), as follows:
+Our model was similar to the ones previously described for the 2-step task (e.g., \cite{wunderlich_dopamine_2012}). In specific, agents updated action values $Q$ for actions $a_{2}$ available in the second stage by observing the trial outcome (reward $R = 1$ or $R = 0$), as follows:
 
 \begin{equation}
 Q(s_{2}, a_{2}) = Q(s_{2}, a_{2}) + \alpha_{2} \cdot RPE,
