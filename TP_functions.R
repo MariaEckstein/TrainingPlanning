@@ -111,8 +111,8 @@ create_lagged_regr_data = function(dat = ts) {
   dat$rep_key[dat$repeat_first_key == T] =  0.5
   dat$rep_key[dat$repeat_first_key == F] = -0.5
   
-  for (subj in unique(dat$SubjID)) {
-    for (runi in unique(dat$run)) {
+  for (runi in unique(dat$run)) {
+    for (subj in unique(dat$SubjID)) {
       
       # Stage 1 stuff
       subj_dat = subset(dat, SubjID == subj & run == runi, select = c("trial", "choice1", "rew_com", "rew_unc", "nor_com", "nor_unc", "rep_key", "pair2", "choice2", "reward"))

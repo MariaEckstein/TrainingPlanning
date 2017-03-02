@@ -14,6 +14,9 @@ output:
 ---
 
 # PART 0: TDs
+* Run only the things that I need for the paper, but double-check that everything is right! (1) switch-stay. (2) Regression. (3) Parameters.
+* If I have time AFTER that, run lagged regression.
+
 * Correlation between w & logistic regression interaction term OR (interaction term - reward term)
 * Or: median split on w and compare logistic regressions (also for simulated data)
 
@@ -97,6 +100,8 @@ all_files = read.csv(file.path(regression_dir, paste("all_files", data_source, "
 # Get column classes right (cannot rename reward ("Reward", "NoReward") and transition because otherwise later things crash)
 all_files$session = factor(all_files$session, levels = c(1, 2), labels = c("Session 1", "Session 2"))
 all_files$run = factor(all_files$run, levels = c("A", "B", "C", "D"), labels = c("Run 1", "Run 2", "Run 3", "Run 4"))
+all_files$run[all_files$session == "Session 2" & all_files$run == "Run 1"] = "Run 3"
+all_files$run[all_files$session == "Session 2" & all_files$run == "Run 2"] = "Run 4"
 ts_orig = add_group_columns(data = all_files)
 
 ### Add important columns to the data
@@ -144,8 +149,6 @@ ts = subset(ts_orig, trial > 20)
 
 ## (0) Remove Run 4
 # Fix runs for subj 106 (got versions A and B in the second session instead of C and D!!!)
-ts$run[ts$session == "Session 2" & ts$run == "Run 1"] = "Run 3"
-ts$run[ts$session == "Session 2" & ts$run == "Run 2"] = "Run 4"
 
 if (remove_run4) {
   ts = subset(ts, run != "Run 4")
@@ -198,7 +201,7 @@ ts$ToL_bad = ts$food_bad = ts$catii_bad = ts$catrb_bad = NULL
 preproc_dat = merge(preproc_dat, count_too_fast_RTs, by = c("SubjID", "session", "run"), all.x = T, sort = F)
 
 ## Create switch-stay data
-stay_dat  = ddply(subset(ts, !is.na(reward_prev_trial) & subj_run_persev == F),
+stay_dat  = ddply(subset(ts, !is.na(reward_prev_trial)),
                   .(SubjID, session, run, transi_prev_trial, reward_prev_trial, training, training_s1), summarize,
                   stays = sum(stay_first_stage, na.rm = T),
                   trials = length(stay_first_stage),
@@ -324,7 +327,7 @@ stay_switch_plot = ggplot(plot_dat, aes(reward_prev_trial, stay_prob, fill = tra
 
 if (ggsave_figures) {
   ggsave(plot = stay_switch_plot, filename = paste(figure_dir, "stay_switch_plot.png", sep = "/"), width = 5, height = 5)
-  ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 5, height = 3.5)
+  ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 5, height = 4)
 }
 ```
 ```{r Relative switch-stay plots, echo = F, fig.cap = "Probabilities relative to participants' baseline (= mean) stay probabilities."}
@@ -504,6 +507,17 @@ gg_overall_stats = ggplot(subset(switch_stay_stats_run_train, run != "Run 4" & m
   facet_grid(training ~ run)
 gg_overall_stats
 
+#### Like Anne said
+gg_regr = ggplot(subset(switch_stay_stats_run_train, run != "Run 4" & mod == "key+rew*tra" & predictor %in% c("rew", "tra", "int")), aes(run, beta, color = predictor, shape = sig, group = predictor)) +
+  geom_point() +
+  geom_line() +
+  scale_shape_manual(values = c(1, 16)) +
+  # geom_text(aes(label = ifelse(as.numeric(p) < 0.1, round(as.numeric(p), 3), "")), hjust = 0, vjust = 0, size = 3) +
+  labs(x = "", y = "effect") +
+  theme(legend.position = "none") +
+  facet_grid(training ~ .)
+gg_regr
+
 ### By runs, comparing groups
 gg_overall_stats_run = ggplot(subset(switch_stay_stats_run, run != "Run 4" & mod == "key+tra*rew*gro"), aes(predictor, chisq, shape = sig)) +
   geom_point(color = "darkblue") +
@@ -516,6 +530,10 @@ gg_overall_stats_run
 
 ### Grand model
 switch_stay
+
+if (ggsave_figures) {
+  ggsave(file.path(figure_dir, "gg_regr.png"), gg_regr, width = 2, height = 4)
+}
 ```
 ```{r Check if models with key or without key have a better model fit, echo = F}
 
@@ -720,30 +738,20 @@ for (runi in unique(logist_regr_data_AICs$run)) {
 if (preprocess_data) {
   class_and_new_lagged_effects = create_lagged_regr_data(dat = ts)
   class_lagged_effects         = add_group_columns(class_and_new_lagged_effects[[1]])
-  class_smooth_lagged_effects  = create_smooth_lagged_effects(dat = class_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
   lagged_switch_stay           = add_group_columns(class_and_new_lagged_effects[[3]])
-  lagged_switch_stay_smooth    = create_smooth_lagged_effects(dat = lagged_switch_stay, name = "lagged_switch_stay", number_of_iterations = 1)
-  colnames(lagged_switch_stay_smooth)[colnames(lagged_switch_stay_smooth) %in% c("log_odds", "sd_log_odds", "smooth_log_odds")] = c("stay_percent", "sd_stay_percent", "smooth_stay_percent")
   lagged_switch_stay_stage2    = add_group_columns(class_and_new_lagged_effects[[4]])
   new_lagged_effects        = add_group_columns(class_and_new_lagged_effects[[2]])
-  new_smooth_lagged_effects = create_smooth_lagged_effects(dat = new_lagged_effects, name = "class_lagged_effects", number_of_iterations = 1)
   
   write.csv(class_lagged_effects, file.path(regression_dir, paste("class_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
-  write.csv(class_smooth_lagged_effects, file.path(regression_dir, paste("class_smooth_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
   write.csv(lagged_switch_stay, file.path(regression_dir, paste("lagged_switch_stay_", data_source, ".csv", sep = "")), row.names = F)
-  write.csv(lagged_switch_stay_smooth, file.path(regression_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv", sep = "")), row.names = F)
   write.csv(lagged_switch_stay_stage2, file.path(regression_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv", sep = "")), row.names = F)
   write.csv(new_lagged_effects, file.path(regression_dir, paste("new_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
-  write.csv(new_smooth_lagged_effects, file.path(regression_dir, paste("new_smooth_lagged_effects_", data_source, ".csv", sep = "")), row.names = F)
 }
 ## Read in data
 class_lagged_effects         = read.csv(file.path(regression_dir, paste("class_lagged_effects_", data_source, ".csv", sep = "")))
-class_smooth_lagged_effects  = read.csv(file.path(regression_dir, paste("class_smooth_lagged_effects_", data_source, ".csv", sep = "")))
 lagged_switch_stay           = read.csv(file.path(regression_dir, paste("lagged_switch_stay_", data_source, ".csv", sep = "")))
-lagged_switch_stay_smooth    = read.csv(file.path(regression_dir, paste("lagged_switch_stay_smooth_", data_source, ".csv", sep = "")))
 lagged_switch_stay_stage2    = read.csv(file.path(regression_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv", sep = "")))
 new_lagged_effects           = read.csv(file.path(regression_dir, paste("new_lagged_effects_", data_source, ".csv", sep = "")))
-new_smooth_lagged_effects    = read.csv(file.path(regression_dir, paste("new_smooth_lagged_effects_", data_source, ".csv", sep = "")))
 ```
 ```{r Plot results of lagged regression, echo = F}
 
@@ -792,16 +800,6 @@ gg_lagged_swista = ggplot(lagged_switch_stay, aes(lag, stay_percent, color = con
   facet_grid(training ~ run)
   # facet_wrap(~ run)
 
-gg_lagged_swista_smooth = ggplot(lagged_switch_stay_smooth, aes(lag, smooth_stay_percent, color = condition)) +
-  geom_hline(yintercept = 0, color = "grey") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
-  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
-  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10) +
-  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  facet_grid(training ~ run)
-  # facet_wrap(~ run)
-
 # Lagged log odds of reward & transition
 gg_lagged_logodds = ggplot(class_lagged_effects, aes(lag, log_odds, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -842,17 +840,6 @@ gg_lagged_regr_odds_s1 = ggplot(subset(class_lagged_regr_plot_dat), aes(lag, log
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   facet_grid(training_s1 ~ run)
   # facet_wrap(~ run)
-
-gg_lagged_logodds_smooth = ggplot(subset(class_smooth_lagged_effects, condition %in% c("rew_com", "rew_unc", "nor_com", "nor_unc")), aes(lag, smooth_log_odds, color = condition)) +
-  geom_hline(yintercept = 0, color = "grey") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
-  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
-  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
-  scale_x_continuous(breaks = -1:-10) +
-  theme(legend.position = "none") +#"left", legend.background = element_rect(fill = "transparent")) +
-  facet_grid(training ~ run)
-  # facet_wrap(~ run)
-
 
 ### Integrate key perseverance
 
@@ -1082,9 +1069,19 @@ gg_params_s1
 gg_params = gg_params_s1 +
   facet_grid(training ~ run)
 
+gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
+  # geom_point(position = "jitter", alpha = .2) +
+  labs(x = "", y = "Parameter w") +
+  # coord_cartesian(ylim = c(0, 1)) +
+  facet_grid(training_s1 ~ .) +
+  theme(legend.position = "none")
+gg_w_s1
+
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
   ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
+  ggsave(file.path(figure_dir, "gg_w_s1.png"), gg_w_s1, width = 2, height = 4)
 }
 ```
 ```{r Regression model w ~ run * training, echo = F}
