@@ -8,3 +8,5 @@ RLDM/
 *.png
 *.pdf
 *.asv
+*.R*
+auswertung_alle.txt
