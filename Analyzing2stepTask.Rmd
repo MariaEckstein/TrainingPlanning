@@ -793,7 +793,8 @@ gg_rel_BIC = ggplot(subset(rel_BIC_molten, run != "Run 4"), aes(variable, value)
 gg_rel_BIC
 
 gg_rel_BIC_run = gg_rel_BIC +
-  facet_grid(~ run)
+  facet_grid(~ run) +
+  coord_cartesian(ylim = c(-30, 50))
 gg_rel_BIC_run
 
 gg_rel_AIC = ggplot(subset(rel_AIC_molten, run != "Run 4"), aes(variable, value), group = SubjID) +
@@ -829,28 +830,34 @@ binom.test(mf_better, mf_total)   # ***
 l0_total = sum(!is.na(rel_BIC$l0))
 l0_better = sum(rel_BIC$l0 < 0, na.rm = T)
 binom.test(l0_better, l0_total)   # ***
+wilcox.test(rel_BIC$l0)
 ## l1
 l1_total = sum(!is.na(rel_BIC$l1))
 l1_better = sum(rel_BIC$l1 < 0, na.rm = T)
 binom.test(l1_better, l1_total)   # ***
+wilcox.test(rel_BIC$l1)
 ## l1 > l0
 l1_total = sum(!is.na(rel_BIC$l0 - rel_BIC$l1))
 l1_better = sum((rel_BIC$l0 - rel_BIC$l1) > 0, na.rm = T)
 binom.test(l1_better, l1_total)   # * (p = 0.01017)
+wilcox.test(rel_BIC$l1, rel_BIC$l0)
 
 # AIC stats
 ## mf
 mf_total = sum(!is.na(rel_AIC$mf))
 mf_better = sum(rel_AIC$mf < 0, na.rm = T)
 binom.test(mf_better, mf_total)   # ***
+wilcox.test(rel_AIC$mf)
 ## l0
 l0_total = sum(!is.na(rel_AIC$l0))
 l0_better = sum(rel_AIC$l0 < 0, na.rm = T)
 binom.test(l0_better, l0_total)   # p = 0.1671
+wilcox.test(rel_AIC$l0)
 ## l1
 l1_total = sum(!is.na(rel_AIC$l1))
 l1_better = sum(rel_AIC$l1 < 0, na.rm = T)
 binom.test(l1_better, l1_total)   # ***
+wilcox.test(rel_AIC$l1)
 ```
 ```{r Plot parameters by training and run, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
