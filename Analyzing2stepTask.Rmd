@@ -398,22 +398,7 @@ if (preprocess_data) {
       model_dat = subset(ts, run == runi & training_s1 == traini, select = c("SubjID", "run", "training_s1", "stay_first_stage", "reward_prev_trial", "transi_prev_trial", "repeat_first_key"))
       if (!empty(model_dat)) {
         
-        # # Small model: Just reward * transition
-        # mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial + (reward_prev_trial * transi_prev_trial | SubjID),
-        #       family = binomial, control = glmerControl(optimizer = "bobyqa"),
-        #       data = model_dat)
-        # 
-        # switch_stay_stats_run_train[row:(row+3),1] = c("sta", "rew", "tra", "int")   # Which predictor?
-        # switch_stay_stats_run_train[row:(row+3),2] = runi   # Run
-        # switch_stay_stats_run_train[row:(row+3),3] = traini   # Group
-        # switch_stay_stats_run_train[row:(row+3),4:7] = coefficients(summary(mod))   # beta, se, z, and p values
-        # switch_stay_stats_run_train[row:(row+3),8] = summary(mod)$AICtab[1]   # AIC
-        # switch_stay_stats_run_train[row:(row+3),9] = summary(mod)$AICtab[2]   # BIC
-        # switch_stay_stats_run_train[row:(row+3),10] = "rew*tra"   # Name of the model
-        # 
-        # row = row + 4
-        
-        # Full(er) model: Keyrep + reward * transition
+        # model: Keyrep + reward * transition
         mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial * transi_prev_trial + (repeat_first_key + reward_prev_trial * transi_prev_trial | SubjID),
               family = binomial, control = glmerControl(optimizer = "bobyqa"),
               data = model_dat)
@@ -427,7 +412,6 @@ if (preprocess_data) {
         switch_stay_stats_run_train[row:(row+4),10] = "key+rew*tra"   # Name of the model
         
         row = row + 5
-        
       }
     }
   }
@@ -440,23 +424,8 @@ if (preprocess_data) {
     
     if (!empty(model_dat)) {
       
-      # # Small model: Just training * reward * transition
-      # mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),
-      #       family = binomial, control = glmerControl(optimizer = "bobyqa"),
-      #       data = model_dat)
-      # aov = Anova(mod, type = 3)
-      # 
-      # switch_stay_stats_run[row:(row+7),1] = c("sta", "rew", "tra", "gro", "int", "rewgro", "tragro", "intgro")   # Which predictor?
-      # switch_stay_stats_run[row:(row+7),2] = runi   # Run
-      # switch_stay_stats_run[row:(row+7),3:5] = aov   # z and p values
-      # switch_stay_stats_run[row:(row+7),6] = summary(mod)$AICtab[1]   # AIC
-      # switch_stay_stats_run[row:(row+7),7] = summary(mod)$AICtab[2]   # BIC
-      # switch_stay_stats_run[row:(row+7),8] = "tra*rew*gro"   # Model name
-      # 
-      # row = row + 8
-      
-      # Full(er) model: Keyrep + training * reward * transition
-      mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),   # Could also use update()?
+      # model: Keyrep + training * reward * transition
+      mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),
             family = binomial, control = glmerControl(optimizer = "bobyqa"),
             data = model_dat)
       aov = Anova(mod, type = 3)
@@ -479,13 +448,6 @@ if (preprocess_data) {
   r2_vs_r3 = c(0, -1, 1)
   contrasts(model_dat$run) = cbind(r1_vs_r23, r2_vs_r3)
   
-  # # SMall model
-  # mod = glmer(stay_first_stage ~ reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
-  #               (reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
-  #     family = binomial, control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6)),
-  #     data = model_dat)
-  # switch_stay1 = cbind(coefficients(summary(mod)), "rew*tra*gro*run", summary(mod)$AICtab[1], summary(mod)$AICtab[2])
-
   # Full model
   mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
                 (repeat_first_key + reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
@@ -554,202 +516,27 @@ if (ggsave_figures) {
 }
 ```
 ```{r Check if models with key or without key have a better model fit, echo = F}
+# Deleted code for models without key becaue they were worse
 
-# Prepare BIC data
-switch_stay_stats_run_train_BIC = ddply(switch_stay_stats_run_train, .(mod, run, training), summarize, BIC = mean(BIC), AIC = mean(AIC))
-switch_stay_stats_run_BIC = ddply(switch_stay_stats_run, .(mod, run), summarize, BIC = mean(BIC), AIC = mean(AIC))
-switch_stay_stats_run_BIC$training = "all"
-BIC_dat = rbind(switch_stay_stats_run_train_BIC, switch_stay_stats_run_BIC)
-# Plot
-gg_BIC = ggplot(BIC_dat, aes(run, BIC, color = mod)) +
-  geom_point() +
-  scale_color_manual(values = c("darkblue", "lightblue", "darkblue", "lightblue")) +
-  facet_grid(~ training)
-gg_BIC
-
-if (ggsave_figures) {
-  ggsave(plot = gg_overall_stats, filename = paste(figure_dir, "gg_stay_switch_plot_stats.png", sep = "/"), width = 5, height = 5)
-  ggsave(plot = gg_overall_stats_run, filename = paste(figure_dir, "gg_stay_switch_plot_stats_run.png", sep = "/"), width = 12, height = 3)
-  ggsave(plot = gg_BIC, filename = paste(figure_dir, "gg_BIC.png", sep = "/"), width = 10, height = 5)
-}
+# # Prepare BIC data
+# switch_stay_stats_run_train_BIC = ddply(switch_stay_stats_run_train, .(mod, run, training), summarize, BIC = mean(BIC), AIC = mean(AIC))
+# switch_stay_stats_run_BIC = ddply(switch_stay_stats_run, .(mod, run), summarize, BIC = mean(BIC), AIC = mean(AIC))
+# switch_stay_stats_run_BIC$training = "all"
+# BIC_dat = rbind(switch_stay_stats_run_train_BIC, switch_stay_stats_run_BIC)
+# # Plot
+# gg_BIC = ggplot(BIC_dat, aes(run, BIC, color = mod)) +
+#   geom_point() +
+#   scale_color_manual(values = c("darkblue", "lightblue", "darkblue", "lightblue")) +
+#   facet_grid(~ training)
+# gg_BIC
+# 
+# if (ggsave_figures) {
+#   ggsave(plot = gg_overall_stats, filename = paste(figure_dir, "gg_stay_switch_plot_stats.png", sep = "/"), width = 5, height = 5)
+#   ggsave(plot = gg_overall_stats_run, filename = paste(figure_dir, "gg_stay_switch_plot_stats_run.png", sep = "/"), width = 12, height = 3)
+#   ggsave(plot = gg_BIC, filename = paste(figure_dir, "gg_BIC.png", sep = "/"), width = 10, height = 5)
+# }
 ```
-```{r Create separate logistic regression for each participant, echo = F, warning = F, message = F, fig.cap = "Log odds"}
 
-source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
-if (preprocess_data) {
-  both_logist_regr_data         = create_logist_regr_data(dat = ts, number.discarded.trials = 20)
-  logist_regr_data              = both_logist_regr_data[[1]]
-  logist_regr_data_with_correct = both_logist_regr_data[[2]]
-  logist_regr_data_with_rep     = both_logist_regr_data[[3]]
-  logist_regr_data              = add_group_columns(logist_regr_data)
-  logist_regr_data_with_correct = add_group_columns(logist_regr_data_with_correct)
-  logist_regr_data_with_rep     = add_group_columns(logist_regr_data_with_rep)
-  write.csv(logist_regr_data, file.path(regression_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")), row.names = F)
-  write.csv(logist_regr_data_with_correct, file.path(regression_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")), row.names = F)
-  write.csv(logist_regr_data_with_rep, file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")), row.names = F)
-}
-
-logist_regr_data              = read.csv(file.path(regression_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")))
-logist_regr_data_with_correct = read.csv(file.path(regression_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")))
-logist_regr_data_with_rep     = read.csv(file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")))
-```
-```{r Plot regression models results (odds ratios for main effects of transition and reward and interaction, echo = F}
-
-gg_logreg_rti = ggplot(logist_regr_data, aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_text(aes(label = ifelse(abs(odds) > quantile(abs(logist_regr_data$odds), .9, na.rm = T), as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  # facet_wrap( ~ run) + #training
-  facet_grid(training ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "All subjects")
-
-gg_logreg_rti_s1 = ggplot(subset(logist_regr_data), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_text(aes(label = ifelse(abs(odds) > quantile(abs(logist_regr_data$odds), .9, na.rm = T), as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  # facet_wrap( ~ run) + #training
-  facet_grid(training_s1 ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "All subjects")
-
-gg_logreg_rti_excl = ggplot(subset(logist_regr_data, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  # facet_wrap( ~ run) + #training
-  facet_grid(training ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "10% Outliers removed")
-gg_logreg_rti_excl
-
-gg_logreg_rti_excl_s1 = ggplot(subset(logist_regr_data, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T) & run != "Run 4"), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  # facet_wrap( ~ run) + #training
-  facet_grid(training_s1 ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "10% Outliers removed")
-gg_logreg_rti_excl_s1
-
-gg_logreg_rtic = ggplot(logist_regr_data_with_correct, aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_text(aes(label = ifelse(abs(odds) > quantile(abs(logist_regr_data$odds), .9, na.rm = T), as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "all subjects")
-
-gg_logreg_rtic_s1 = ggplot(subset(logist_regr_data_with_correct), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_text(aes(label = ifelse(abs(odds) > quantile(abs(logist_regr_data$odds), .9, na.rm = T), as.character(SubjID), '')), hjust = 0, vjust = 0, size = 4) +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training_s1 ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "all subjects")
-
-gg_logreg_rtic_excl = ggplot(subset(logist_regr_data_with_correct, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "outliers removed")
-
-gg_logreg_rtic_excl_s1 = ggplot(subset(logist_regr_data_with_correct, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T) & run != "Run 4"), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training_s1 ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "outliers removed")
-
-gg_logreg_rticr_excl = ggplot(subset(logist_regr_data_with_rep, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "outliers removed")
-
-gg_logreg_rticr_excl_s1 = ggplot(subset(logist_regr_data_with_rep, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
-  # stat_summary(fun.y = "mean", geom = "bar") +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
-  geom_point(alpha = 0.7) + #position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = 0.2) +
-  facet_grid(training_s1 ~ run) +
-  theme(legend.position = "none") +
-  labs(x = "", y = "Log odds", title = "outliers removed")
-gg_logreg_rticr_excl_s1
-```
-```{r Plot model fits for the models with differnt numbers of predictors, echo = F}
-
-logist_regr_data_s = cbind(ddply(logist_regr_data, .(run, SubjID, training), summarize,
-                                 AIC = mean(AIC), Chi_diff_cor = mean(Chi_diff_cor), Chi_diff_rep = mean(Chi_diff_rep), Chi_p_cor = mean(Chi_p_cor), Chi_p_rep = mean(Chi_p_rep)), 
-                           model = "base")
-logist_regr_data_with_correct_s = cbind(ddply(logist_regr_data_with_correct, .(run, SubjID, training), summarize, AIC = mean(AIC)), model = "cor", Chi_diff_cor = NA, Chi_diff_rep = NA, Chi_p_cor = NA, Chi_p_rep = NA)
-logist_regr_data_with_rep_s = cbind(ddply(logist_regr_data_with_rep, .(run, SubjID, training), summarize, AIC = mean(AIC)), model = "rep", Chi_diff_cor = NA, Chi_diff_rep = NA, Chi_p_cor = NA, Chi_p_rep = NA)
-logist_regr_data_AICs = rbind(logist_regr_data_s, logist_regr_data_with_correct_s, logist_regr_data_with_rep_s)
-
-gg_logregr_modelfits = ggplot(logist_regr_data_AICs, aes(model, AIC)) +
-  stat_summary(fun.y = mean, geom = "bar") +
-  geom_point(alpha = .3, color = "darkblue") +#, position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = .2, color = "darkblue") +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-  labs(x = "Model") +
-  facet_wrap(~ run)
-gg_logregr_modelfits
-
-logist_regr_data_AICs_long_Chi = melt(subset(logist_regr_data_AICs, model == "base"),
-                                      c("run", "SubjID", "training"), c("Chi_diff_cor", "Chi_diff_rep"), "effect")
-colnames(logist_regr_data_AICs_long_Chi)[5] = "Chi_diff"
-logist_regr_data_AICs_long_Chi$effect = as.character(logist_regr_data_AICs_long_Chi$effect)
-logist_regr_data_AICs_long_Chi$effect[logist_regr_data_AICs_long_Chi$effect == "Chi_diff_cor"] = "cor"
-logist_regr_data_AICs_long_Chi$effect[logist_regr_data_AICs_long_Chi$effect == "Chi_diff_rep"] = "rep"
-logist_regr_data_AICs_long_p = melt(subset(logist_regr_data_AICs, model == "base"),
-                                    c("run", "SubjID", "training"), c("Chi_p_cor", "Chi_p_rep"), "effect")
-colnames(logist_regr_data_AICs_long_p)[5] = "p"
-logist_regr_data_AICs_long_p$effect = as.character(logist_regr_data_AICs_long_p$effect)
-logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_cor"] = "cor"
-logist_regr_data_AICs_long_p$effect[logist_regr_data_AICs_long_p$effect == "Chi_p_rep"] = "rep"
-logist_regr_data_AICs_long = merge(logist_regr_data_AICs_long_Chi, logist_regr_data_AICs_long_p, by = c("run", "SubjID", "training", "effect"), all = T)
-
-gg_logregr_modelfitsdiffs = ggplot(logist_regr_data_AICs_long, aes(effect, Chi_diff)) +
-  stat_summary(fun.y = mean, geom = "bar") +
-  geom_point(aes(shape = p < 0.05), alpha = .3, color = "darkblue") +#, position = "jitter") +
-  geom_line(aes(group = SubjID), alpha = .2, color = "darkblue") +
-  scale_shape_manual(values = c(1, 16)) +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
-  labs(x = "Predictor", y = "Difference in deviances", shape = "sig.") +
-  theme(legend.position = c(.8, .3)) +
-  facet_wrap(~ run)
-
-logist_regr_ttests = data.frame(run = NA, effect = NA, t = NA, p = NA)[0,]
-row = 1
-for (runi in unique(logist_regr_data_AICs$run)) {
-  tc = t.test(subset(logist_regr_data_AICs, run == runi)$Chi_diff_cor)$statistic
-  pc = t.test(subset(logist_regr_data_AICs, run == runi)$Chi_diff_cor)$p.value
-  logist_regr_ttests[row,] = c(runi, "Chi_diff_cor", tc, pc)
-  tr = t.test(subset(logist_regr_data_AICs, run == runi)$Chi_diff_rep)$statistic
-  pr = t.test(subset(logist_regr_data_AICs, run == runi)$Chi_diff_rep)$p.value
-  logist_regr_ttests[row+1,] = c(runi, "Chi_diff_rep", tr, pr)
-  row = row + 2
-}
-```
 ```{r Create data for lagged regression (switch_stay ~ reward_common + reward_rare + noreward_common + noreward_rare), echo = F, warning = F, message = F, fig.cap = "Switch-stay analysis with more lags."}
 
 ## Create data
