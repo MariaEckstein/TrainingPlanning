@@ -104,7 +104,7 @@ all_files$run[all_files$session == "Session 2" & all_files$run == "Run 1"] = "Ru
 all_files$run[all_files$session == "Session 2" & all_files$run == "Run 2"] = "Run 4"
 ts_orig = add_group_columns(data = all_files)
 
-### Add important columns to the data
+### Add important columns to the data (before pre-processing, because individual trials will be removed in pre-processing, so this wouldn't work any more)
 ts_orig$reward_prev_trial = NA
 ts_orig$transi_prev_trial = NA
 ts_orig$stay_first_stage  = NA
@@ -112,7 +112,7 @@ ts_orig$repeat_first_key  = NA
 for (subj in unique(ts_orig$SubjID)) {
   for (sessi in unique(ts_orig$session)) {
     for (runi in unique(ts_orig$run)) {
-      # Add reward in previous trial
+      # Add reward of previous trial
       subj_reward  = ts_orig$reward[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi]
       ts_orig$reward_prev_trial[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi] =
         c(NA, subj_reward[1:length(subj_reward)-1])
@@ -120,7 +120,7 @@ for (subj in unique(ts_orig$SubjID)) {
       subj_choice1 = ts_orig$choice1[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi]
       ts_orig$stay_first_stage[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi] =
         subj_choice1 == c(NA, subj_choice1[1:length(subj_choice1)-1])
-      # Add transition in previous trial
+      # Add transition of previous trial
       subj_transi  = ts_orig$uncommon_trans[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi]
       ts_orig$transi_prev_trial[ts_orig$SubjID == subj & ts_orig$session == sessi & ts_orig$run == runi] =
         c(NA, subj_transi[1:length(subj_transi)-1])
@@ -131,7 +131,6 @@ for (subj in unique(ts_orig$SubjID)) {
     }
   }
 }
-
 ```
 ```{r Clean 2-step raw data, echo = F, warning = F}
 # Steps of data cleaning:
@@ -148,8 +147,6 @@ for (subj in unique(ts_orig$SubjID)) {
 ts = subset(ts_orig, trial > 20)
 
 ## (0) Remove Run 4
-# Fix runs for subj 106 (got versions A and B in the second session instead of C and D!!!)
-
 if (remove_run4) {
   ts = subset(ts, run != "Run 4")
 }
@@ -166,18 +163,45 @@ ts$no_var = ts$variation1 = NULL
 
 ## (3) Not too much key perseverance
 # Find key perseverance trials (the same 1st-stage key > 10 times; 0.5 ^ 10 = 0.00098); remove later for switch-stay analysis
-two_things  = find_perseverance_trials(data = ts, num_keys = limits.key_perseverance_trials)
-preproc_dat = add_group_columns(two_things[[2]])
-ts          = two_things[[1]]
+ts$subj_run_persev = FALSE
+key_persev_dat = expand.grid(run = unique(ts$run), session = unique(ts$session), SubjID = unique(ts$SubjID))
+
+# For each subject, for each session and each run, indicate if the same key has been pressed at least 'num_keys' times in a row
+for (subj in unique(ts$SubjID)) {
+  for (runi in unique(ts$run)) {
+    subj_run_dat = subset(ts, SubjID == subj & run == runi)
+    if (!empty(subj_run_dat)) {
+      subj_run_persev = rep(FALSE, nrow(subj_run_dat))
+      
+      for (trial in 1:(nrow(subj_run_dat) - limits.key_perseverance_trials)) {
+        stay_keys = sum(subj_run_dat$repeat_first_key[trial:(trial+limits.key_perseverance_trials-1)], na.rm = T)
+        
+        if (stay_keys == limits.key_perseverance_trials) {
+          subj_run_persev[trial:(trial+limits.key_perseverance_trials)] = TRUE
+        }
+      }
+      key_persev_dat$persev[with(key_persev_dat, SubjID == subj & run == runi)] = sum(subj_run_persev)
+      key_persev_dat$nrow[with(key_persev_dat, SubjID == subj & run == runi)] = nrow(subj_run_dat)
+      ts$subj_run_persev[with(ts, SubjID == subj & run == runi)] = subj_run_persev 
+    }
+  }
+}
+key_persev_dat = subset(key_persev_dat, !is.na(persev))
+key_persev_dat$percent = with(key_persev_dat, persev / nrow)
+preproc_dat = add_group_columns(key_persev_dat)
+
 n_trials_key_pers = sum(ts$subj_run_persev)   # Count how many are removed
 ts = subset(ts, !subj_run_persev)
 
 ## (4) Not too fast RTs
 # Remove too fast trials (based on RT1; RT2 is not really normally distributed and excluding all trials < 100 would look weird)
 count_too_fast_RTs = ddply(ts, c("SubjID", "session", "run"), summarize,
-                           fast_trials = sum(RT1 < limits.trial_RTs, na.rm = T))
-n_trials_fast = sum(ts$RT1 <= limits.trial_RTs, na.rm = T)   # Count how many are removed
-ts = subset(ts, RT1 > limits.trial_RTs)
+                           fast_trials = sum(RT1 <= limits.trial_RTs | RT2 <= limits.trial_RTs, na.rm = T))
+n_trials_fast = sum(ts$RT1 <= limits.trial_RTs | ts$RT2 <= limits.trial_RTs, na.rm = T)   # Count how many are removed
+ts = subset(ts, RT1 > limits.trial_RTs & RT2 > limits.trial_RTs)
+
+## (4.5) Valid response
+ts = subset(ts, !is.na(RT1) & !is.na(RT2))
 
 ## (5) Lost more than 75% of data
 count_trials = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
@@ -296,19 +320,13 @@ stay_dat$rel_stay_prob = with(stay_dat, stay_prob - mean_stay_prob)
 ```
 ```{r Switch-stay plots, echo = F, message = F, warning = F}
 
-x = 0; y = 1.15
-if (data_source == 2015) {
-  plot_dat = subset(stay_dat, run == "Run 2" & !is.na(reward_prev_trial))
-  plot_dat_rel = subset(stay_dat, run == "Run 2" & !is.na(reward_prev_trial))
-} else if (data_source == 2016 | data_source == "2016from_scratch") {
-  plot_dat = subset(stay_dat, !is.na(reward_prev_trial))
-}
+plot_dat = subset(stay_dat, !is.na(reward_prev_trial))
 
 stay_switch_plot_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
   labs(x = "", y = "s1 stay probability", fill = "") +
-  coord_cartesian(ylim = c(.57, .77)) +
+  coord_cartesian(ylim = c(.57, .82)) +
   # scale_y_continuous(breaks = seq(.6, 1, .2), labels = seq(.6, 1, .2)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -376,24 +394,24 @@ if (preprocess_data) {
   row = 1
   for (runi in unique(stay_dat$run)) {
     for (traini in unique(stay_dat$training_s1)) {
-      model_dat = subset(ts, run == runi & training_s1 == traini, select = c("SubjID", "run", "training_s1", "stay_first_stage", "reward_prev_trial", "transi_prev_trial", "repeat_first_key"))
       
+      model_dat = subset(ts, run == runi & training_s1 == traini, select = c("SubjID", "run", "training_s1", "stay_first_stage", "reward_prev_trial", "transi_prev_trial", "repeat_first_key"))
       if (!empty(model_dat)) {
         
-        # Small model: Just reward * transition
-        mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial + (reward_prev_trial * transi_prev_trial | SubjID),
-              family = binomial, control = glmerControl(optimizer = "bobyqa"),
-              data = model_dat)
-        
-        switch_stay_stats_run_train[row:(row+3),1] = c("sta", "rew", "tra", "int")   # Which predictor?
-        switch_stay_stats_run_train[row:(row+3),2] = runi   # Run
-        switch_stay_stats_run_train[row:(row+3),3] = traini   # Group
-        switch_stay_stats_run_train[row:(row+3),4:7] = coefficients(summary(mod))   # beta, se, z, and p values
-        switch_stay_stats_run_train[row:(row+3),8] = summary(mod)$AICtab[1]   # AIC
-        switch_stay_stats_run_train[row:(row+3),9] = summary(mod)$AICtab[2]   # BIC
-        switch_stay_stats_run_train[row:(row+3),10] = "rew*tra"   # Name of the model
-        
-        row = row + 4
+        # # Small model: Just reward * transition
+        # mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial + (reward_prev_trial * transi_prev_trial | SubjID),
+        #       family = binomial, control = glmerControl(optimizer = "bobyqa"),
+        #       data = model_dat)
+        # 
+        # switch_stay_stats_run_train[row:(row+3),1] = c("sta", "rew", "tra", "int")   # Which predictor?
+        # switch_stay_stats_run_train[row:(row+3),2] = runi   # Run
+        # switch_stay_stats_run_train[row:(row+3),3] = traini   # Group
+        # switch_stay_stats_run_train[row:(row+3),4:7] = coefficients(summary(mod))   # beta, se, z, and p values
+        # switch_stay_stats_run_train[row:(row+3),8] = summary(mod)$AICtab[1]   # AIC
+        # switch_stay_stats_run_train[row:(row+3),9] = summary(mod)$AICtab[2]   # BIC
+        # switch_stay_stats_run_train[row:(row+3),10] = "rew*tra"   # Name of the model
+        # 
+        # row = row + 4
         
         # Full(er) model: Keyrep + reward * transition
         mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial * transi_prev_trial + (repeat_first_key + reward_prev_trial * transi_prev_trial | SubjID),
@@ -422,20 +440,20 @@ if (preprocess_data) {
     
     if (!empty(model_dat)) {
       
-      # Small model: Just training * reward * transition
-      mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),
-            family = binomial, control = glmerControl(optimizer = "bobyqa"),
-            data = model_dat)
-      aov = Anova(mod, type = 3)
-      
-      switch_stay_stats_run[row:(row+7),1] = c("sta", "rew", "tra", "gro", "int", "rewgro", "tragro", "intgro")   # Which predictor?
-      switch_stay_stats_run[row:(row+7),2] = runi   # Run
-      switch_stay_stats_run[row:(row+7),3:5] = aov   # z and p values
-      switch_stay_stats_run[row:(row+7),6] = summary(mod)$AICtab[1]   # AIC
-      switch_stay_stats_run[row:(row+7),7] = summary(mod)$AICtab[2]   # BIC
-      switch_stay_stats_run[row:(row+7),8] = "tra*rew*gro"   # Model name
-
-      row = row + 8
+      # # Small model: Just training * reward * transition
+      # mod = glmer(stay_first_stage ~ reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),
+      #       family = binomial, control = glmerControl(optimizer = "bobyqa"),
+      #       data = model_dat)
+      # aov = Anova(mod, type = 3)
+      # 
+      # switch_stay_stats_run[row:(row+7),1] = c("sta", "rew", "tra", "gro", "int", "rewgro", "tragro", "intgro")   # Which predictor?
+      # switch_stay_stats_run[row:(row+7),2] = runi   # Run
+      # switch_stay_stats_run[row:(row+7),3:5] = aov   # z and p values
+      # switch_stay_stats_run[row:(row+7),6] = summary(mod)$AICtab[1]   # AIC
+      # switch_stay_stats_run[row:(row+7),7] = summary(mod)$AICtab[2]   # BIC
+      # switch_stay_stats_run[row:(row+7),8] = "tra*rew*gro"   # Model name
+      # 
+      # row = row + 8
       
       # Full(er) model: Keyrep + training * reward * transition
       mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial * transi_prev_trial * training_s1 + (reward_prev_trial * transi_prev_trial | SubjID),   # Could also use update()?
@@ -461,12 +479,12 @@ if (preprocess_data) {
   r2_vs_r3 = c(0, -1, 1)
   contrasts(model_dat$run) = cbind(r1_vs_r23, r2_vs_r3)
   
-  # SMall model
-  mod = glmer(stay_first_stage ~ reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
-                (reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
-      family = binomial, control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6)),
-      data = model_dat)
-  switch_stay1 = cbind(coefficients(summary(mod)), "rew*tra*gro*run", summary(mod)$AICtab[1], summary(mod)$AICtab[2])
+  # # SMall model
+  # mod = glmer(stay_first_stage ~ reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
+  #               (reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run | SubjID),
+  #     family = binomial, control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6)),
+  #     data = model_dat)
+  # switch_stay1 = cbind(coefficients(summary(mod)), "rew*tra*gro*run", summary(mod)$AICtab[1], summary(mod)$AICtab[2])
 
   # Full model
   mod = glmer(stay_first_stage ~ repeat_first_key + reward_prev_trial + transi_prev_trial + reward_prev_trial:transi_prev_trial + reward_prev_trial:training_s1 + reward_prev_trial:transi_prev_trial:training_s1 + reward_prev_trial:run + reward_prev_trial:transi_prev_trial:run + reward_prev_trial:transi_prev_trial:training_s1:run +
