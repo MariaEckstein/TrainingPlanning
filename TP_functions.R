@@ -754,42 +754,42 @@ create_cor_diff_data = function(data, variable = "cor_dat", colname = "stay_prob
   cor_diff_data
 }
 
-find_perseverance_trials = function(data = ts, num_keys = 10) {
-
-  # Initialize values
-  data$subj_run_persev = FALSE
-  key_persev_dat = expand.grid(run = unique(data$run), session = unique(data$session), SubjID = unique(data$SubjID))
-  
-  # For each subject, for each session and each run, indicate if the same key has been pressed at least 'num_keys' times in a row
-  for (subj in unique(data$SubjID)) {
-    for (sessi in unique(data$session)) {
-      for (runi in unique(data$run)) {
-        subj_run_dat = subset(data, SubjID == subj & run == runi & session == sessi)
-        if (!empty(subj_run_dat)) {
-          subj_run_persev = rep(FALSE, nrow(subj_run_dat))
-          
-          for (trial in 1:(nrow(subj_run_dat) - num_keys)) {
-            stay_keys = sum(subj_run_dat$repeat_first_key[trial:(trial+num_keys)], na.rm = T)
-            
-            if (stay_keys == num_keys) {
-              subj_run_persev[trial:(trial+num_keys)] = TRUE
-            }
-          }
-          
-          key_persev_dat$persev[with(key_persev_dat, SubjID == subj & run == runi & session == sessi)] = sum(subj_run_persev)
-          key_persev_dat$nrow[with(key_persev_dat, SubjID == subj & run == runi & session == sessi)] = nrow(subj_run_dat)
-          data$subj_run_persev[with(data, SubjID == subj & run == runi & session == sessi)] = subj_run_persev 
-        }
-      }
-    }
-  }
-  
-  # Calculate what percentage of button presses belongs to this kind of key perseverance (same key more than 'num_keys' times in a row)
-  key_persev_dat = subset(key_persev_dat, !is.na(persev))
-  key_persev_dat$percent = with(key_persev_dat, persev / nrow)
-  
-  list(data, key_persev_dat)
-}
+# find_perseverance_trials = function(data = ts, num_keys = 10) {
+# 
+#   # Initialize values
+#   data$subj_run_persev = FALSE
+#   key_persev_dat = expand.grid(run = unique(data$run), session = unique(data$session), SubjID = unique(data$SubjID))
+#   
+#   # For each subject, for each session and each run, indicate if the same key has been pressed at least 'num_keys' times in a row
+#   for (subj in unique(data$SubjID)) {
+#     for (sessi in unique(data$session)) {
+#       for (runi in unique(data$run)) {
+#         subj_run_dat = subset(data, SubjID == subj & run == runi & session == sessi)
+#         if (!empty(subj_run_dat)) {
+#           subj_run_persev = rep(FALSE, nrow(subj_run_dat))
+#           
+#           for (trial in 1:(nrow(subj_run_dat) - num_keys)) {
+#             stay_keys = sum(subj_run_dat$repeat_first_key[trial:(trial+num_keys)], na.rm = T)
+#             
+#             if (stay_keys == num_keys) {
+#               subj_run_persev[trial:(trial+num_keys)] = TRUE
+#             }
+#           }
+#           
+#           key_persev_dat$persev[with(key_persev_dat, SubjID == subj & run == runi & session == sessi)] = sum(subj_run_persev)
+#           key_persev_dat$nrow[with(key_persev_dat, SubjID == subj & run == runi & session == sessi)] = nrow(subj_run_dat)
+#           data$subj_run_persev[with(data, SubjID == subj & run == runi & session == sessi)] = subj_run_persev 
+#         }
+#       }
+#     }
+#   }
+#   
+#   # Calculate what percentage of button presses belongs to this kind of key perseverance (same key more than 'num_keys' times in a row)
+#   key_persev_dat = subset(key_persev_dat, !is.na(persev))
+#   key_persev_dat$percent = with(key_persev_dat, persev / nrow)
+#   
+#   list(data, key_persev_dat)
+# }
 
 create_lines_data = function(run, facet_var = "training") {
   

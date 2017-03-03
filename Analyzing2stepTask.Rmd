@@ -24,13 +24,13 @@ output:
 
 After completing the experiment, some subjects reported that they had explored the reward probabilities of different *keys* rather than *fractals* in the 2-step task because they mistrusted the accuracy of the task instructions after receiving reward at a rather low rate. In addition, we had noticed during administration of the 2-step task that when getting tired, some subjects tended to repeat the same key for considerable durations, neglecting the task. To clean the data from both of these sources of noise, we decided to exclude all trials from the *switch-stay analysis*, in which the same key had been pressed more than 9 times in a row. (Removing these trials is justified because the probability that 10 consecutive trials required pressing the same key 10 times in a row is negligibly low, i.e., $0.5^{10} = `r round(0.5 ^ 10 * 100, 3)`$ percent). For the *parameter analysis*, an additional parameter $k$ was added to the model, which captured *key perseverance*. ($k$ is described in more detail below.) 
 
-```{r Set script parameters, results = F, warning = F}
+```{r Set script parameters and load libraries, results = F, warning = F}
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
 remove_run4 = T
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 do_exclude_bad_training_blocks = F      # Exclude 2-step blocks that come from sessions with really bad training task performance?
-ggsave_figures = T                      # Save figures as pngs onto the computer?
+ggsave_figures = F                      # Save figures as pngs onto the computer?
 preprocess_data = F
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
@@ -44,9 +44,7 @@ if (do_exclude_bad_training_blocks) {
 limits.stage1_choice_variation = 0.025   # Limit to exclude the whole 2-step task from one subject: Minimal necessary percentage of chosing the less-chosen 1st-stage stimulus, throughout a session. If a subject choses the less-chosen stimulus in less than 'limits.stage1_choice_variation' percent of trials (and choses the more-chosen stimulus more that '1 - limits.stage1_choice_variation'), than this subject will be excluded from further analyses. Set 'limits.stage1_choice_variation' to 0 if no subjects should be excluded.
 limits.key_perseverance_trials = 175      # Limit to exclude individual trials: In how many trials in a row may a subject press the same button without theses trials being excluded?
 limits.trial_RTs = 100                  # Limit to exlcude individual trials: All trials with RT1 (= first-stage RT) faster than limits.trial_RTs will be excluded.
-limits.exclude_subject = 0.75   # Limit to exclude the whole 2-step task from one subject: Did the subject loose more than 75% of the data during pre-processing?
-```
-```{r Load libraries, echo = F, results = F, warning = F, message = F}
+limits.exclude_subject = 0.5            # Limit to exclude the whole 2-step task from one subject: Does the dataset still have more than 50% of the original number of trials after pre-processing?
 
 source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
 library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); library("reshape"); library("R.matlab"); library("simpleboot"); library("car"); library("mlogit"); library("zoo"); library("lme4"); library("lmerTest"); library("robustlmm")
@@ -140,6 +138,7 @@ for (subj in unique(ts_orig$SubjID)) {
 ## (2) Enough variation in 1st-stage choice
 ## (3) Not too much key perseverance
 ## (4) Not too fast RTs
+## (4.5) Valid response
 ## (5) Lost more than 75% of data
 ## (6) Bad training performance
 
@@ -326,7 +325,7 @@ stay_switch_plot_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_t
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
   labs(x = "", y = "s1 stay probability", fill = "") +
-  coord_cartesian(ylim = c(.57, .82)) +
+  coord_cartesian(ylim = c(.57, .78)) +
   # scale_y_continuous(breaks = seq(.6, 1, .2), labels = seq(.6, 1, .2)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -357,7 +356,6 @@ stay_switch_plot_rel_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_pr
   # geom_text(aes(label = ifelse(abs(rel_stay_prob) > .1, as.character(SubjID), '')), hjust = 0, vjust = 0, position = position_dodge(width = .9), size = 3) +
   labs(x = "", y = "Relative stay prob.", fill = "") +
   scale_fill_manual(values = c("blue", "red")) +
-  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
   # facet_wrap( ~ run)
   facet_grid(training_s1 ~ run)
 stay_switch_plot_rel_s1
@@ -712,12 +710,11 @@ ts_params = merge(ts_params, bad_perf, all.x = T)
 if (do_exclude_trials) {
   
   # Exclude the same subject that have been excluded from behavioral analyses
-  ts_params = merge(ts_params, subset(count_trials, select = -n_trials), all.x = T)
-  ts_params = subset(ts_params, !few_trials)
-  ts_params$few_trials = NULL
+  included_subj = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
+  ts_params = merge(ts_params, included_subj, all.y = T)   # all.y = T -> all rows are removed from x (ts_params), which are not also present in y (included_subj)
   
-  # Exclude datasets with abnormal BICs
-  ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)) & !SubjID == 106)
+  # Exclude datasets with abnormal BICs (if there are anys)
+  ts_params = subset(ts_params, BIC < (mean(ts_params$BIC) + 5 * sd(ts_params$BIC)))
 }
 if (do_exclude_bad_training_blocks) {
   ts_params = subset(ts_params, (is.na(ToL_bad) | !ToL_bad) & (is.na(food_bad) | !food_bad) & (is.na(catii_bad) | !catii_bad) & (is.na(catrb_bad) | !catrb_bad))
@@ -839,7 +836,7 @@ binom.test(l1_better, l1_total)   # ***
 ## l1 > l0
 l1_total = sum(!is.na(rel_BIC$l0 - rel_BIC$l1))
 l1_better = sum((rel_BIC$l0 - rel_BIC$l1) > 0, na.rm = T)
-binom.test(l1_better, l1_total)   # * (p = 0.001017)
+binom.test(l1_better, l1_total)   # * (p = 0.01017)
 
 # AIC stats
 ## mf
@@ -860,7 +857,6 @@ binom.test(l1_better, l1_total)   # ***
 selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
 
-x = 0; y = 1
 gg_params_s1 =
   ggplot(subset(selected_parameter_dat, run != "Run 4"), aes(parameter, estimate, color = parameter != "w")) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
@@ -876,7 +872,8 @@ gg_params = gg_params_s1 +
 
 gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  # geom_point(position = "jitter", alpha = .2) +
+  # geom_point(alpha = .2) + #position = "jitter", 
+  # geom_line(alpha = .2, aes(group = SubjID)) +
   labs(x = "", y = "Parameter w") +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_grid(training_s1 ~ .) +
@@ -905,6 +902,7 @@ params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
      na.action = na.omit,
      REML = F)
 summary(params_mod)
+Anova(params_mod, type = 3)
 ```
 ```{r Calculate parameter changes from run 1 to runs 2 and 3, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
 
@@ -915,7 +913,7 @@ for (parami in unique(selected_parameter_dat$parameter)) {
     
     dat = subset(selected_parameter_dat, parameter == parami & SubjID == subj)
     
-    if (nrow(dat) >= 3) {
+    if (nrow(dat) %in% 3:4) {
       estim1 = subset(dat, run == "Run 1")$estimate
       estim2 = subset(dat, run == "Run 2")$estimate
       estim3 = subset(dat, run == "Run 3")$estimate
@@ -980,7 +978,7 @@ params_rel_mod = lmer(estimate ~ training_s1 * runs + (1 | SubjID),
                       data = subset(plot_dat, parameter == "w"),
                       REML = F)
 summary(params_rel_mod)
-
+Anova(params_rel_mod, type = 3)
 ```
 ```{r Relation between training tasks and 2-step, echo = F}
 
