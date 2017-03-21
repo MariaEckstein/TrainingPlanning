@@ -27,6 +27,7 @@ After completing the experiment, some subjects reported that they had explored t
 ```{r Set script parameters and load libraries, results = F, warning = F}
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
+use_Klaus_model = T                     # use Klaus' model fitting results?
 remove_run4 = T
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 do_exclude_bad_training_blocks = F      # Exclude 2-step blocks that come from sessions with really bad training task performance?
@@ -672,10 +673,44 @@ gg_manipcheck
 ```{r Read in parameter data, echo = F, results = F, warning = F, message = F}
 
 ### Read in data frames for all combinations of parameters
-# ts_colnames = c("a1", "a2", "b1", "b2", "l", "p", "k", "w", "BIC", "SubjID", "session", "run", "f")
-ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")#, "n_fit"
-ts_params = data.frame(t(ts_colnames))[0,]
-colnames(ts_params) = ts_colnames
+ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")
+ts_params = data.frame()
+
+if (preprocess_data) {
+  # Read in Klaus' .mat file
+  mat_file = readMat(file.path(model_dir, "KlausModelingResults.mat"))$d
+  # Set up stuff for the normal model with 4 parameters (par.hat4) and the hierarchical model with 4 parameters (G2par.hat4)
+  par.hats = c("par.hat4", "G2par.hat4")   # c("par.hat7", "G2par.hat7")
+  BICs = c("X4", "G4")   # c("X7", "G7")
+  # Get info of one subject after the other from mat_file
+  for (fileid in (1:dim(mat_file)[3])) {
+    subj_file = mat_file[,,fileid]
+    subjID = subj_file$no
+    # Read in normal model (1), then hierarchical model (2)
+    for (hier in 1:2) {
+      # Read in runs 1-4
+      for (run in 1:4) {
+        par4 = subj_file[[paste("two.step", run, sep = "")]][,,1][[par.hats[hier]]]
+        BIC = subj_file[[paste("two.step", run, sep = "")]][,,1][[BICs[hier]]][,,1]$BIC
+        AIC = subj_file[[paste("two.step", run, sep = "")]][,,1][[BICs[hier]]][,,1]$AIC
+        if (is.null(par4)) {
+          par4 = BIC = AIC = NA
+        }
+        # Get all the info in a vector
+        subj_par4 = c(subjID, run, par4[1], NA, par4[2], NA, 0, par4[4], par4[3], NA, NA, BIC, AIC, hier)
+        # Add to ts_params
+        ts_params = rbind(ts_params, subj_par4)
+      }
+    }
+  }
+  colnames(ts_params) = c(ts_colnames, "params")
+  ts_params$num_par = 7
+  ts_params$params = paste("a1b1_l0k0", ifelse(ts_params$params == 1, "flat", "hier"), sep = "_")
+  ts_params$session = paste("Session", ifelse(ts_params$run %in% 1:2, 1, 2))
+  write.csv(ts_params, file.path(model_dir, "KlausModelingResults.csv"), row.names = F)
+} else {
+  ts_params = read.csv(file.path(model_dir, "KlausModelingResults.csv"))
+}
 
 file_names = list.files(model_dir, pattern = "genrec_real_agents.*.mat")
 for (file_name in file_names) {
@@ -690,6 +725,7 @@ for (file_name in file_names) {
   # Add current file to the big file
   ts_params = rbind(ts_params, par_file)
 }
+
 if (remove_run4) {
   ts_params = subset(ts_params, run %in% 1:3)
 } else {
@@ -697,6 +733,7 @@ if (remove_run4) {
 }
 ts_params$run = paste("Run", ts_params$run)
 ts_params$run = factor(ts_params$run)
+ts_params$params = factor(ts_params$params)
 ts_params$num_par[ts_params$params == "hyb"] = 8
 ts_params$num_par[ts_params$params == "mf"] = ts_params$num_par[ts_params$params == "l0"] = ts_params$num_par[ts_params$params == "l1"] = ts_params$num_par[ts_params$params == "nop"] = ts_params$num_par[ts_params$params == "nok"] = ts_params$num_par[ts_params$params == "b20"] = 7
 ts_params$num_par[ts_params$params == "a1b1"] = ts_params$num_par[ts_params$params == "nopk"] = 6
@@ -730,6 +767,78 @@ ts_params_molten$params    = as.factor(ts_params_molten$params)
 ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
 summary(ts_params_molten)
 ```
+```{r Compare Klaus' and my parameters, echo = F}
+w_molten = reshape(subset(ts_params, select = c("SubjID", "run", "w", "params")),
+                   idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
+
+gg_w_flat_hier = ggplot(w_molten, aes(w.a1b1_l0k0_flat, w.a1b1_l0k0_hier)) +
+  geom_point() +
+  geom_abline(slope = 1)
+gg_w_flat_hier
+
+gg_w_k_m = ggplot(w_molten, aes(w.a1b1_l0k0_flat, w.l0)) +
+  geom_point() +
+  geom_abline(slope = 1)
+gg_w_k_m
+
+gg_w_hyb_l0 = ggplot(w_molten, aes(w.hyb, w.l0)) +
+  geom_point() +
+  geom_abline(slope = 1)
+gg_w_hyb_l0
+
+p_molten = reshape(subset(ts_params, select = c("SubjID", "run", "p", "params")),
+                   idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
+
+gg_p_flat_hier = ggplot(p_molten, aes(p.a1b1_l0k0_flat, p.a1b1_l0k0_hier)) +
+  geom_point() +
+  geom_abline(slope = 1)
+gg_p_flat_hier
+
+gg_p_k_m = ggplot(p_molten, aes(p.a1b1_l0k0_flat, p.l0)) +
+  geom_point() +
+  geom_abline(slope = 1/13, intercept = 0.5)
+gg_p_k_m
+
+gg_p_hyb_l0 = ggplot(p_molten, aes(p.hyb, p.l0)) +
+  geom_point() +
+  geom_abline(slope = 1) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
+gg_p_hyb_l0
+
+a_molten = reshape(subset(ts_params, select = c("SubjID", "run", "a1", "params")),
+                   idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
+
+gg_a_flat_hier = ggplot(a_molten, aes(a1.a1b1_l0k0_flat, a1.a1b1_l0k0_hier)) +
+  geom_point() +
+  geom_abline(slope = 1) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
+gg_a_flat_hier
+
+gg_a_k_m = ggplot(a_molten, aes(a1.a1b1_l0k0_flat, a1.l0)) +
+  geom_point() +
+  geom_abline(slope = 1) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
+gg_a_k_m
+
+gg_a_hyb_l0 = ggplot(a_molten, aes(a1.hyb, a1.l0)) +
+  geom_point() +
+  geom_abline(slope = 1) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
+gg_a_hyb_l0
+
+b_molten = reshape(subset(ts_params, select = c("SubjID", "run", "b1", "params")),
+                   idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
+
+gg_b_flat_hier = ggplot(b_molten, aes(b1.a1b1_l0k0_flat, b1.a1b1_l0k0_hier)) +
+  geom_point() +
+  geom_abline(slope = 1)
+gg_b_flat_hier
+
+gg_b_k_m = ggplot(b_molten, aes(b1.a1b1_l0k0_flat, b1.l0)) +
+  geom_point() +
+  geom_abline(slope = 1/40)
+gg_b_k_m
+```
 ```{r Prepare relative BICs, echo = F}
 
 rel_BIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter, AIC)),
@@ -742,8 +851,10 @@ rel_BIC$a1b1 = with(rel_BIC, BIC.a1b1 - BIC.hyb)
 rel_BIC$l0 = with(rel_BIC, BIC.l0 - BIC.hyb)
 rel_BIC$l1 = with(rel_BIC, BIC.l1 - BIC.hyb)
 rel_BIC$b20 = with(rel_BIC, BIC.b20 - BIC.hyb)
+rel_BIC$k_flat = with(rel_BIC, BIC.a1b1_l0k0_flat - BIC.hyb)
+rel_BIC$k_hier = with(rel_BIC, BIC.a1b1_l0k0_hier - BIC.hyb)
 summary(rel_BIC)
-rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok, BIC.nop, BIC.b20)),
+rel_BIC_molten = melt(subset(rel_BIC, select = -c(BIC.a1b1, BIC.hyb, BIC.l0, BIC.l1, BIC.mb, BIC.mf, BIC.nok, BIC.nop, BIC.b20, BIC.a1b1_l0k0_flat, BIC.a1b1_l0k0_hier)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
 
 rel_AIC = reshape(subset(ts_params_molten, parameter == "a1", select = -c(num_par, estimate, parameter, BIC)),
@@ -756,8 +867,10 @@ rel_AIC$a1b1 = with(rel_AIC, AIC.a1b1 - AIC.hyb)
 rel_AIC$l0 = with(rel_AIC, AIC.l0 - AIC.hyb)
 rel_AIC$l1 = with(rel_AIC, AIC.l1 - AIC.hyb)
 rel_AIC$b20 = with(rel_AIC, AIC.b20 - AIC.hyb)
+rel_AIC$k_flat = with(rel_AIC, AIC.a1b1_l0k0_flat - AIC.hyb)
+rel_AIC$k_hier = with(rel_AIC, AIC.a1b1_l0k0_hier - AIC.hyb)
 summary(rel_AIC)
-rel_AIC_molten = melt(subset(rel_AIC, select = -c(AIC.a1b1, AIC.hyb, AIC.l0, AIC.l1, AIC.mb, AIC.mf, AIC.nok, AIC.nop, AIC.b20)),
+rel_AIC_molten = melt(subset(rel_AIC, select = -c(AIC.a1b1, AIC.hyb, AIC.l0, AIC.l1, AIC.mb, AIC.mf, AIC.nok, AIC.nop, AIC.b20, AIC.a1b1_l0k0_flat, AIC.a1b1_l0k0_hier)),
                       id.vars = c("SubjID", "session", "run", "training", "training_s1"))
 
 rel_BIC_AIC = merge(rel_BIC_molten, rel_AIC_molten, by = c("SubjID", "run", "session", "training", "training_s1", "variable"), suff = c("_BIC", "_AIC"))
@@ -861,7 +974,7 @@ wilcox.test(rel_AIC$l1)
 ```
 ```{r Plot parameters by training and run, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
-selected_parameter_dat = subset(ts_params_molten, params == "l1" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))
+selected_parameter_dat = subset(ts_params_molten, params == "a1b1_l0k0_hier" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))   # params == "l1"
 source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
 
 gg_params_s1 =
@@ -869,7 +982,7 @@ gg_params_s1 =
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
   # geom_point(position = "jitter", alpha = .2) +
   labs(x = "", y = "Parameter estimates", fill = "") +
-  coord_cartesian(ylim = c(0, 1)) +
+  # coord_cartesian(ylim = c(0, 1)) +
   facet_grid(training_s1 ~ run) +
   theme(legend.position = "none")
 gg_params_s1
