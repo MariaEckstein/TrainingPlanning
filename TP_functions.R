@@ -249,9 +249,9 @@ create_smooth_lagged_effects = function(dat, name, number_of_iterations = 1) {
 create_logist_regr_data = function(dat = ts, number.discarded.trials = 20) {
   
   ## Prepare empty logist_regr_data
-  logist_regr_data_with_keyrep  = expand.grid(effect = c("KeyRep", "cor", "sta", "rew", "tra", "int"), run = unique(ts$run), SubjID = unique(ts$SubjID), odds = NA, AIC = NA)
-  logist_regr_data_with_correct = expand.grid(effect =           c("cor", "sta", "rew", "tra", "int"), run = unique(ts$run), SubjID = unique(ts$SubjID), odds = NA, AIC = NA)
-  logist_regr_data              = expand.grid(effect =                  c("sta", "rew", "tra", "int"), run = unique(ts$run), SubjID = unique(ts$SubjID), odds = NA, AIC = NA, Chi_diff_cor = NA, Chi_diff_rep = NA, Chi_p_cor = NA, Chi_p_rep = NA)
+  logist_regr_data_with_keyrep  = expand.grid(effect = c("KeyRep", "cor", "sta", "rew", "tra", "int"), run = unique(dat$run), SubjID = unique(dat$SubjID), odds = NA, AIC = NA)
+  logist_regr_data_with_correct = expand.grid(effect =           c("cor", "sta", "rew", "tra", "int"), run = unique(dat$run), SubjID = unique(dat$SubjID), odds = NA, AIC = NA)
+  logist_regr_data              = expand.grid(effect =                  c("sta", "rew", "tra", "int"), run = unique(dat$run), SubjID = unique(dat$SubjID), odds = NA, AIC = NA, Chi_diff_cor = NA, Chi_diff_rep = NA, Chi_p_cor = NA, Chi_p_rep = NA)
   
   ## Modify values in ts for Daw's logistic regression (he uses values of 0.5 and -0.5 instead of 1 and -1 and codes the interaction explicitly)
   dat$stay = 1
@@ -292,15 +292,15 @@ create_logist_regr_data = function(dat = ts, number.discarded.trials = 20) {
                                              header = F, row.names = c("f1", "f2", "f3", "f4"), col.names = paste("t", as.character(1:201), sep = ""))))
     reward_probs4 = as.data.frame(t(read.csv('C:/Users/maria/MEGAsync/TrainingPlanningProject/TwoStepTask/stimuli/tryout_list4.csv',
                                              header = F, row.names = c("f1", "f2", "f3", "f4"), col.names = paste("t", as.character(1:201), sep = ""))))
-  reward_probs1$trial = reward_probs2$trial = reward_probs3$trial = reward_probs4$trial = 1:201
-  ## Add reward versions to subject data
-  dat$reward_version[dat$run %in% c("A", "Run 1")] = 1
-  dat$reward_version[dat$run %in% c("B", "Run 2")] = 2
-  dat$reward_version[dat$run %in% c("C", "Run 3")] = 3
-  dat$reward_version[dat$run %in% c("D", "Run 4")] = 4
-  # Fix the error for subj 106 (got versions A and B again in the second session)
-  dat$reward_version[dat$SubjID == 106 & dat$run == "Run 3"] = 1
-  dat$reward_version[dat$SubjID == 106 & dat$run == "Run 4"] = 2
+    reward_probs1$trial = reward_probs2$trial = reward_probs3$trial = reward_probs4$trial = 1:201
+    ## Add reward versions to subject data
+    dat$reward_version[dat$run %in% c("A", "Run 1")] = 1
+    dat$reward_version[dat$run %in% c("B", "Run 2")] = 2
+    dat$reward_version[dat$run %in% c("C", "Run 3")] = 3
+    dat$reward_version[dat$run %in% c("D", "Run 4")] = 4
+    # Fix the error for subj 106 (got versions A and B again in the second session)
+    dat$reward_version[dat$SubjID == 106 & dat$run == "Run 3"] = 1
+    dat$reward_version[dat$SubjID == 106 & dat$run == "Run 4"] = 2
   }
   reward1_subj_dat = subset(dat, reward_version == 1)
   reward2_subj_dat = subset(dat, reward_version == 2)
@@ -310,9 +310,9 @@ create_logist_regr_data = function(dat = ts, number.discarded.trials = 20) {
   reward1_subj_dat = merge(reward1_subj_dat, reward_probs1, by = c("trial"), all.x = T, sort = F)
   reward2_subj_dat = merge(reward2_subj_dat, reward_probs2, by = c("trial"), all.x = T, sort = F)
   dat = as.data.frame(rbind(reward1_subj_dat, reward2_subj_dat))
-  if (!empty(reward4_subj_dat)) {
-    reward3_subj_dat = merge(reward3_subj_dat, reward_probs1, by = c("trial"), all.x = T, sort = F)
-    reward4_subj_dat = merge(reward4_subj_dat, reward_probs2, by = c("trial"), all.x = T, sort = F)
+  if (!empty(reward3_subj_dat)) {
+    reward3_subj_dat = merge(reward3_subj_dat, reward_probs3, by = c("trial"), all.x = T, sort = F)
+    reward4_subj_dat = merge(reward4_subj_dat, reward_probs4, by = c("trial"), all.x = T, sort = F)
     dat = as.data.frame(rbind(reward1_subj_dat, reward2_subj_dat, reward3_subj_dat, reward4_subj_dat))
   }
   dat = dat[with(dat, order(SubjID, session, run, trial)),]

@@ -348,6 +348,34 @@ if (ggsave_figures) {
   ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 5, height = 4)
 }
 ```
+```{r Daws subject-wise logistic regression, echo = F}
+if (preprocess_data) {
+  both_logist_regr_data         = create_logist_regr_data(dat = ts, number.discarded.trials = 20)
+  logist_regr_data              = both_logist_regr_data[[1]]
+  logist_regr_data_with_correct = both_logist_regr_data[[2]]
+  logist_regr_data_with_rep     = both_logist_regr_data[[3]]
+  logist_regr_data              = add_group_columns(logist_regr_data)
+  logist_regr_data_with_correct = add_group_columns(logist_regr_data_with_correct)
+  logist_regr_data_with_rep     = add_group_columns(logist_regr_data_with_rep)
+  write.csv(logist_regr_data, file.path(regression_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(logist_regr_data_with_correct, file.path(regression_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")), row.names = F)
+  write.csv(logist_regr_data_with_rep, file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")), row.names = F)
+}
+
+logist_regr_data              = read.csv(file.path(regression_dir, paste("logist_regr_data_", data_source, ".csv", sep = "")))
+logist_regr_data_with_correct = read.csv(file.path(regression_dir, paste("logist_regr_data_with_correct_", data_source, ".csv", sep = "")))
+logist_regr_data_with_rep     = read.csv(file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")))
+```
+```{r Plot Daws subjectwise logistic regression, echo = F}
+gg_logreg_rticr_excl = ggplot(subset(logist_regr_data_with_rep, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
+  # stat_summary(fun.y = "mean", geom = "bar") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
+  geom_point(alpha = 0.7) + #position = "jitter") +
+  geom_line(aes(group = SubjID), alpha = 0.2) +
+  facet_grid(training_s1 ~ run) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Log odds", title = "outliers removed")
+```
 ```{r Relative switch-stay plots, echo = F, fig.cap = "Probabilities relative to participants' baseline (= mean) stay probabilities."}
 
 stay_switch_plot_rel_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_trial, rel_stay_prob, fill = transi_prev_trial)) + #, color = transi_prev_trial)) +
@@ -675,13 +703,14 @@ gg_manipcheck
 ### Read in data frames for all combinations of parameters
 ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")
 ts_params = data.frame()
+num_par = 4   # number of parameters for Klaus' models
 
 if (preprocess_data) {
   # Read in Klaus' .mat file
   mat_file = readMat(file.path(model_dir, "KlausModelingResults.mat"))$d
   # Set up stuff for the normal model with 4 parameters (par.hat4) and the hierarchical model with 4 parameters (G2par.hat4)
-  par.hats = c("par.hat4", "G2par.hat4")   # c("par.hat7", "G2par.hat7")
-  BICs = c("X4", "G4")   # c("X7", "G7")
+  par.hats = paste(c("par.hat", "G2par.hat"), num_par, sep = "")
+  BICs = paste(c("X", "G2"), num_par, sep = "")
   # Get info of one subject after the other from mat_file
   for (fileid in (1:dim(mat_file)[3])) {
     subj_file = mat_file[,,fileid]
@@ -704,13 +733,12 @@ if (preprocess_data) {
     }
   }
   colnames(ts_params) = c(ts_colnames, "params")
-  ts_params$num_par = 7
+  ts_params$num_par = num_par
   ts_params$params = paste("a1b1_l0k0", ifelse(ts_params$params == 1, "flat", "hier"), sep = "_")
   ts_params$session = paste("Session", ifelse(ts_params$run %in% 1:2, 1, 2))
-  write.csv(ts_params, file.path(model_dir, "KlausModelingResults.csv"), row.names = F)
-} else {
-  ts_params = read.csv(file.path(model_dir, "KlausModelingResults.csv"))
+  write.csv(ts_params, file.path(model_dir, paste("KlausModelingResults", num_par, ".csv", sep = "")), row.names = F)
 }
+ts_params = read.csv(file.path(model_dir, paste("KlausModelingResults", num_par, ".csv", sep = "")))
 
 file_names = list.files(model_dir, pattern = "genrec_real_agents.*.mat")
 for (file_name in file_names) {
@@ -719,9 +747,9 @@ for (file_name in file_names) {
   colnames(par_file) = ts_colnames
   # Add model name (params) and number of parameters (num_par)
   params = strsplit(strsplit(file_name, split = "genrec_real_agents_")[[1]][2], "_sim.*.mat")[[1]][1]
-  num_par = 0   # can't count how many parameters because some are 0, some 1, some 0.5... would have to check for parameters with sd == 0 to make it work
   session = paste("Session", ifelse(par_file$run %in% c(1, 2), 1, 2))
-  par_file = cbind(par_file, params, num_par, session)
+  num_par = 0
+  par_file = cbind(par_file, params, num_par, session)   # can't count how many parameters because some are 0, some 1, some 0.5... would have to check for parameters with sd == 0 to make it work
   # Add current file to the big file
   ts_params = rbind(ts_params, par_file)
 }
@@ -767,7 +795,7 @@ ts_params_molten$params    = as.factor(ts_params_molten$params)
 ts_params_molten$num_par   = as.numeric(as.character(ts_params_molten$num_par))
 summary(ts_params_molten)
 ```
-```{r Compare Klaus' and my parameters, echo = F}
+```{r Compare Klaus and my parameters, echo = F}
 w_molten = reshape(subset(ts_params, select = c("SubjID", "run", "w", "params")),
                    idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
 
@@ -838,6 +866,14 @@ gg_b_k_m = ggplot(b_molten, aes(b1.a1b1_l0k0_flat, b1.l0)) +
   geom_point() +
   geom_abline(slope = 1/40)
 gg_b_k_m
+```
+```{r Compare RL model parameters and switch-stay interaction terms, echo = F}
+params_regr_dat = merge(subset(logist_regr_data_with_rep, effect == "int", select = -AIC), ts_params)
+
+ggplot(subset(params_regr_dat, params %in% c("a1b1_l0k0_flat", "a1b1_l0k0_hier", "l0") & odds < 5 & odds > -5), aes(w, odds)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(~ params)
 ```
 ```{r Prepare relative BICs, echo = F}
 
