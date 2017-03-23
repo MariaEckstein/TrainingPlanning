@@ -299,6 +299,16 @@ gg_cat_over_trials
 sum_cat_dat = ddply(cat_dat, .(SubjID, run, task, training, training_s1), summarize,
                     ACC = mean(ACC, na.rm = T),
                     RT = median(RT, na.rm = T))
+finalACC = ddply(subset(cat_dat, trial >= 90), .(SubjID, run, task, training, training_s1), summarize,
+                 finACC = mean(ACC, na.rm = T))
+sum_cat_dat = merge(sum_cat_dat, finalACC)
+ii_trials = subset(sum_cat_dat, task == "ii")$finACC
+ii_median = median(ii_trials, na.rm = T)
+sum_cat_dat$median[sum_cat_dat$task == "ii"] = ifelse(ii_trials > ii_median, "above", "below")
+rb_trials = subset(sum_cat_dat, task == "rb")$finACC
+rb_median = median(rb_trials, na.rm = T)
+sum_cat_dat$median[sum_cat_dat$task == "rb"] = ifelse(rb_trials > rb_median, "above", "below")
+sum_cat_dat$median = factor(sum_cat_dat$median)
 summary(sum_cat_dat)
 
 gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, 100 * ACC, group = 1, color = task)) +
@@ -311,14 +321,14 @@ gg_cat_over_trials3
 ```
 ```{r Add cat perf to bad_perf, echo = F, message = F, warning = F}
 bad_perf = merge(bad_perf,
-                 subset(sum_cat_dat, task == "ii", select = c("SubjID", "run", "ACC")),
+                 subset(sum_cat_dat, task == "ii", select = c("SubjID", "run", "ACC", "finACC", "median")),
                  all = T)
-colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "catii_ACC"
+colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "finACC", "median")] = c("catii_ACC", "catii_finACC", "catii_median")
 
 bad_perf = merge(bad_perf,
-                 subset(sum_cat_dat, task == "rb", select = c("SubjID", "run", "ACC")),
+                 subset(sum_cat_dat, task == "rb", select = c("SubjID", "run", "ACC", "finACC", "median")),
                  all = T)
-colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "catrb_ACC"
+colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "finACC", "median")] = c("catrb_ACC", "catrb_finACC", "catrb_median")
 
 ```
 ```{r Category performance by subject, echo = F, message = F, warning = F}
@@ -333,7 +343,148 @@ gg_cat_by_subj
 
 ```
 
+# Orientation discrimination
+
+```{r read in data}
+
+if (preprocess_data) {
+  col_names = c("SubjID", "run", "trial", "ACC", "RT")
+  ori_dat = data.frame()
+  filenames = list.files(data_dir, pattern = "ROT.*.mat")   # ROT_105_1_A
+  
+  for (filename in filenames) {
+    
+    ### Get SubjID and run
+    SubjID = substr(filename, 5, 7)
+    run = substr(filename, 11, 11)
+    if (run == "A") {run = "Run 1"
+    } else if (run == "B") {run = "Run 2"
+    } else if (run == "C") {run = "Run 3"
+    } else if (run == "D") {run = "Run 4"
+    }
+    
+    ### Read in measures (ACC & RT)
+    exp = readMat(file.path(data_dir, filename))$exp
+    
+    ACC = matrix(exp[,,1]$ARROWdata[[1]])
+    RT = matrix(exp[,,1]$ARROWdata[[2]])
+    length(RT) = length(ACC)
+      
+    ### Add to ori_dat
+    subj_dat = cbind(SubjID, run, 1:length(ACC), ACC, RT)
+    colnames(subj_dat) = col_names
+    ori_dat = rbind(ori_dat, subj_dat)
+  }
+  # ori_dat = subset(ori_dat, trial <= 65)   # only the first few participants got 120 trials
+  ori_dat = add_group_columns(ori_dat)
+  write.csv(ori_dat, file.path(data_dir, "ori_dat.csv"), row.names = F)
+}
+ori_dat = read.csv(file.path(data_dir, "ori_dat.csv"))
+
+### Remove super-fast trials
+ori_dat = subset(ori_dat, RT > 150 & !is.na(ACC))
+    
+summary(ori_dat)
+head(ori_dat)
+
+```
+```{r Orientation performance over time, echo = F, message = F, warning = F}
+
+gg_ori_over_trials = ggplot(ori_dat, aes(trial, 100 * ACC, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange", alpha = .5) +
+  labs(y = "% correct discrimination") +
+  geom_hline(yintercept = 50) +
+  geom_text(label = "chance", x = 60, y = 45, color = "black") +
+  facet_grid( ~ run)
+gg_ori_over_trials
+
+sum_ori_dat = ddply(ori_dat, .(SubjID, run, training, training_s1), summarize,
+                    ACC = mean(ACC, na.rm = T),
+                    RT = median(RT, na.rm = T))
+summary(sum_ori_dat)
+
+gg_ori_over_trials3 = ggplot(sum_ori_dat, aes(run, 100 * ACC, group = 1)) +
+  stat_summary(fun.y = mean, geom = "point", color = "black") +
+  geom_point(alpha = .5, position = "jitter") +
+  geom_hline(yintercept = 50) +
+  geom_text(label = "chance", x = 3, y = 45, color = "black")
+gg_ori_over_trials3
+```
+```{r Add ori perf to bad_perf, echo = F, message = F, warning = F}
+bad_perf = merge(bad_perf,
+                 subset(sum_ori_dat, select = c("SubjID", "run", "ACC")),
+                 all = T)
+colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "ori_ACC"
+
+```
+
+# Number comparison
+
+```{r read in data}
+
+if (preprocess_data) {
+  col_names = c("SubjID", "run", "trial", "ACC")
+  num_dat = data.frame()
+  filenames = list.files(data_dir, pattern = "NUM.*.mat")   # NUM_180_2_D
+  
+  for (filename in filenames) {
+    
+    ### Get SubjID and run
+    SubjID = substr(filename, 5, 7)
+    run = substr(filename, 11, 11)
+    if (run == "A") {run = "Run 1"
+    } else if (run == "B") {run = "Run 2"
+    } else if (run == "C") {run = "Run 3"
+    } else if (run == "D") {run = "Run 4"
+    }
+    
+    ### Read in measures (ACC & RT)
+    exp = readMat(file.path(data_dir, filename))$data
+    ACC = matrix(exp[,,1]$correct)
+      
+    ### Add to num_dat
+    subj_dat = cbind(SubjID, run, 1:length(ACC), ACC)
+    colnames(subj_dat) = col_names
+    num_dat = rbind(num_dat, subj_dat)
+  }
+  # num_dat = subset(num_dat, trial <= 65)   # only the first few participants got 120 trials
+  num_dat = add_group_columns(num_dat)
+  write.csv(num_dat, file.path(data_dir, "num_dat.csv"), row.names = F)
+}
+num_dat = read.csv(file.path(data_dir, "num_dat.csv"))
+summary(num_dat)
+head(num_dat)
+
+```
+```{r Number comparison performance over time, echo = F, message = F, warning = F}
+
+gg_num_over_trials = ggplot(num_dat, aes(trial, 100 * ACC, color = training, group = training)) +
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange", alpha = .5) +
+  labs(y = "% correct discrimination") +
+  geom_hline(yintercept = 50) +
+  geom_text(label = "chance", x = 50, y = 45, color = "black") +
+  facet_grid( ~ run)
+gg_num_over_trials
+
+sum_num_dat = ddply(num_dat, .(SubjID, run, training, training_s1), summarize,
+                    ACC = mean(ACC, na.rm = T))
+summary(sum_num_dat)
+
+gg_num_over_trials3 = ggplot(sum_num_dat, aes(run, 100 * ACC, group = 1)) +
+  stat_summary(fun.y = mean, geom = "point", color = "black") +
+  geom_point(alpha = .5, position = "jitter")
+gg_num_over_trials3
+```
+```{r Add num perf to bad_perf, echo = F, message = F, warning = F}
+bad_perf = merge(bad_perf,
+                 subset(sum_num_dat, select = c("SubjID", "run", "ACC")),
+                 all = T)
+colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "num_ACC"
+summary(bad_perf)
+```
+
 # All tasks together
+
 ```{r Add performance evaluation for each task to bad_perf, echo = F, message = F, warning = F}
 
 # Save final bad_perf to disk
@@ -343,6 +494,8 @@ if (preprocess_data) {
   bad_perf$food_bad = ifelse(bad_perf$food_ncor < 8, T, F)
   bad_perf$catii_bad = ifelse(bad_perf$catii_ACC < 0.3, T, F)
   bad_perf$catrb_bad = ifelse(bad_perf$catrb_ACC < 0.4, T, F)
+  bad_perf$ori_bad = ifelse(bad_perf$ori_ACC < 0.5, T, F)
+  bad_perf$num_bad = ifelse(bad_perf$num_ACC < 0.8, T, F)
   
   write.csv(bad_perf, file.path(data_dir, "bad_perf.csv"), row.names = F)
 }
@@ -368,7 +521,16 @@ gg_mbtasks = ggplot(bad_perf, aes(ToL_noptim, catrb_ACC, color = training, group
   facet_wrap(~ run)
 gg_mbtasks
 
-# Excluding participants with bad performance in these tasks: mf
+# co
+gg_mbtasks = ggplot(bad_perf, aes(ori_ACC, num_ACC, color = training, group = run)) +
+  geom_point(alpha = .5) +
+  labs(x = "Orientation discrimination (% correct)", y = "Number comparison (% correct)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_mbtasks
+
+## Excluding participants with bad performance in these tasks
+# mf
 gg_mftasks = ggplot(subset(bad_perf, !(food_bad | catii_bad)), aes(food_ncor, 100 * catii_ACC, color = training, group = run)) +
   geom_point() +
   labs(x = "Food task (# correct buttons / trial)", y = "Category task ii (% correct trials)") +
@@ -384,24 +546,13 @@ gg_mbtasks = ggplot(subset(bad_perf, !(ToL_bad | catrb_bad)), aes(ToL_noptim, ca
   facet_wrap(~ run)
 gg_mbtasks
 
-# Based on run means and sds
-# bad_perf$food_bad = NA
-# bad_perf$cat_bad = NA
-# 
-# for (runi in unique(bad_perf$run)) {
-#   mean_food = mean(subset(bad_perf, run == runi)$food_ncor, na.rm = T)
-#   sd_food = sd(subset(bad_perf, run == runi)$food_ncor, na.rm = T)
-#   outlier_food = subset(bad_perf, run == runi)$food_ncor < mean_food - 2 * sd_food
-#   
-#   for (cati in c("catii_ACC", "catrb_ACC")) {
-#     mean_cat = mean(subset(bad_perf, run == runi)$`cati`, na.rm = T)
-#     sd_cat = sd(subset(bad_perf, run == runi)$`cati`, na.rm = T)
-#     outlier_cat = subset(bad_perf, run == runi)$`cati` < mean_cat - 2 * sd_cat
-#   }
-#   
-#   bad_perf$food_bad[bad_perf$run == runi] = ifelse(outlier_food, T, F)
-#   bad_perf$cat_bad = ifelse((bad_perf$catii_ACC < 0.3) | (bad_perf$catrb_ACC < 0.3), T, F)
-# }
+# control
+gg_cotasks = ggplot(subset(bad_perf, !(ori_bad | num_bad)), aes(ori_ACC, num_ACC, color = training, group = run)) +
+  geom_point(alpha = .5) +
+  labs(x = "Orientation discrimination (% correct)", y = "Number comparison (% correct)") +
+  geom_smooth(method = lm, se = F, color = "black") +
+  facet_wrap(~ run)
+gg_cotasks
 ```
 
 # End

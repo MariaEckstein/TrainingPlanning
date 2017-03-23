@@ -1151,62 +1151,53 @@ params_rel_mod = lmer(estimate ~ training_s1 * runs + (1 | SubjID),
 summary(params_rel_mod)
 Anova(params_rel_mod, type = 3)
 ```
-```{r Relation between training tasks and 2-step, echo = F}
 
-# ToL = read_in_ToL()
-# ToL = add_performance_columns_ToL()
-# ToL = add_group_columns(data = ToL)
-# # summary(ToL)
-# # write.table(ToL, file = "TowerTasks/auswertung_alle.csv", quote = F, sep = ",", row.names = F)
-# 
-# Ass = read_in_labass(data = "Ass.csv")
-# Ass = exclude_trials(Ass)
-# Ass = add_group_columns(data = Ass)
-# Ass = add_start_end_columns(data = Ass, group2 = "Model-free training")
-# Ass_learning = add_learning_columns(Ass, "Ass")
-# # write.table(Ass, file = "NavigationAssociationTask/Results/ass_clean.csv", quote = F, sep = ",", row.names = F)
-# # summary(Ass)
-# 
-# Lab = read_in_labass(data = "Lab.csv")
-# Lab = exclude_trials(Lab)
-# Lab = add_group_columns(data = Lab)
-# Lab = add_start_end_columns(data = Lab, group2 = "Model-based training")
-# Lab_learning = add_learning_columns(Lab, "Lab")
-# # write.table(Ass, file = "NavigationAssociationTask/Results/lab_clean.csv", quote = F, sep = ",", row.names = F)
-# # summary(Lab)
-# 
-# GN = read_in_GN()
-# GN = exclude_trials(GN)
-# GN = add_group_columns(data = GN)
-# # write.table(GN, file = "GoNogo/Results/all/GN_clean.csv", quote = F, sep = ",", row.names = F)
-# # summary(GN)
-# 
-# all_perf = create_summary_data_frame()             # Performance for each subjects and run in each training task (irrespective of session)
-# # summary(all_perf)
-# learning_dat = create_learning_data()              # Lab & Ass performance differences between beginning and end of each run (last 50 trials minus first 50 trials)
-# # summary(learning_dat)
-# fatigue_dat = create_fatigue_data()                # Lab & Ass performance differences between the 1st and 2nd run of each session
-# # summary(fatigue_dat)
-# 
-# stay_dat = merge(stay_dat, all_perf, by = c("SubjID", "run", "training"), all.x = T)
-# stay_dat = merge(stay_dat, learning_dat, by = c("SubjID", "session", "run", "group2", "training"), all.x = T)
-# stay_dat = merge(stay_dat, preproc_dat, by = c("SubjID", "session", "run", "group2", "training"), all.x = T)
-# stay_dat = merge(stay_dat, fatigue_dat, by = c("SubjID", "session", "training"), all.x = T)
-# stay_dat$Lab_Ass_learning_absolute_f = NULL
-# stay_dat$Lab_Ass_learning_absolute_f[(stay_dat$Lab_Ass_ACC_start < stay_dat$Lab_Ass_ACC_end)] = "abs. increase"
-# stay_dat$Lab_Ass_learning_absolute_f[(stay_dat$Lab_Ass_ACC_start >= stay_dat$Lab_Ass_ACC_end)] = "abs. decrease"
-# stay_dat$Lab_Ass_learning_absolute_f = factor(stay_dat$Lab_Ass_learning_absolute_f, levels = c("abs. increase", "abs. decrease"))
-# stay_dat = add_median_columns(stay_dat)
-# stay_dat$training = factor(stay_dat$training, labels = c("Model-based training", "Model-free training"))
-# # write.table(stay_dat, file = "stay_dat.csv", quote = F, sep = ",", row.names = F)
-# # head(stay_dat)
-# # summary(stay_dat)
+# Relation between training tasks and 2-step
 
+```{r Training performance -> MB?, echo = F}
+# Prepare data
+ts_plot_dat = subset(ts_params, grepl("klaus", params))
 
-##############################################
-## ToL performance => model-based strategy! ##
-##############################################
+# MB Category
+ggplot(ts_plot_dat, aes(catrb_ACC, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
 
+# ToL
+ggplot(ts_plot_dat, aes(ToL_noptim, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
+
+# MF Category
+ggplot(ts_plot_dat, aes(catii_ACC, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
+
+# Food
+ggplot(ts_plot_dat, aes(food_ncor, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
+
+# Orientation
+ggplot(ts_plot_dat, aes(ori_ACC, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
+
+# Number comparsion
+ggplot(ts_plot_dat, aes(num_ACC, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ params, scales = "free_y")
+
+```
+```{r ToL performance -> MB, echo = F}
+
+# ToL performance => model-based strategy!
 # Who are the people who still show model-based strategies after depletion?
 # ttest_dat$estimate_f = "low"; ttest_dat$estimate_f[ttest_dat$estimate >= 0.5] = "high"
 # subset(ttest_dat, estimate_f == "low" & depletion == "Model-based training")$SubjID
