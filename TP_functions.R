@@ -113,19 +113,19 @@ create_lagged_regr_data = function(dat = ts) {
   
   for (runi in unique(dat$run)) {
     for (subj in unique(dat$SubjID)) {
-      
-      # Stage 1 stuff
       subj_dat = subset(dat, SubjID == subj & run == runi, select = c("trial", "choice1", "rew_com", "rew_unc", "nor_com", "nor_unc", "rep_key", "pair2", "choice2", "reward"))
-      choice1 = subj_dat$choice1
-      
-      # Stage 2 stuff
-      subj_dat_pair1 = subset(subj_dat, pair2 == 1, select = c("choice2", "reward"))
-      subj_dat_pair1$choice2 = as.numeric(as.character(subj_dat_pair1$choice2))
-      subj_dat_pair2 = subset(subj_dat, pair2 == 2, select = c("choice2", "reward"))
-      subj_dat_pair2$choice2 = as.numeric(as.character(subj_dat_pair2$choice2))
       
       if (!empty(subj_dat)) {
         
+        # Stage 1 stuff
+        choice1 = subj_dat$choice1
+        
+        # Stage 2 stuff
+        subj_dat_pair1 = subset(subj_dat, pair2 == 1, select = c("choice2", "reward"))
+        subj_dat_pair1$choice2 = as.numeric(as.character(subj_dat_pair1$choice2))
+        subj_dat_pair2 = subset(subj_dat, pair2 == 2, select = c("choice2", "reward"))
+        subj_dat_pair2$choice2 = as.numeric(as.character(subj_dat_pair2$choice2))
+      
         for (lagi in -1:-10) {
           ## Get the right lag for 'stay_first_stage' (lag1: stay2 ~ rew1+trans1; lag2: stay3 ~ rew1+trans1; lag3: stay4 ~ rew1+trans1; etc)
           # Stage 1
@@ -153,7 +153,7 @@ create_lagged_regr_data = function(dat = ts) {
           subj_dat_pair1$lagged_stay_sec_stage_p1 = moved_lagged_stay_sec_stage_p1
           subj_dat_pair2$lagged_stay_sec_stage_p2 = moved_lagged_stay_sec_stage_p2
           
-          ## Switch-stay analysis (1st stage)
+          ## Switch-stay analysis (1st stage): rew_com stays minus mean stays; rew_unc stays minus mean stays; nor_com stays minus mean stays; etc. 
           rew_com_stays = with(subj_dat, mean(lagged_stay_first_stage[rew_com == 0.5], na.rm = T)) - mean_stays_first_stage
           rew_unc_stays = with(subj_dat, mean(lagged_stay_first_stage[rew_unc == 0.5], na.rm = T)) - mean_stays_first_stage
           nor_com_stays = with(subj_dat, mean(lagged_stay_first_stage[nor_com == 0.5], na.rm = T)) - mean_stays_first_stage
