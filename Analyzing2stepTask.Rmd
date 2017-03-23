@@ -28,7 +28,7 @@ After completing the experiment, some subjects reported that they had explored t
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
 use_Klaus_model = T                     # use Klaus' model fitting results?
-remove_run4 = T
+remove_run4 = F
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 do_exclude_bad_training_blocks = F      # Exclude 2-step blocks that come from sessions with really bad training task performance?
 ggsave_figures = F                      # Save figures as pngs onto the computer?
@@ -48,6 +48,7 @@ limits.trial_RTs = 100                  # Limit to exlcude individual trials: Al
 limits.exclude_subject = 0.5            # Limit to exclude the whole 2-step task from one subject: Does the dataset still have more than 50% of the original number of trials after pre-processing?
 
 source(file.path(home_dir, "TwoStepTask/model/TP_functions.R"))
+source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
 library("gridExtra"); library("nlme"); library("plyr"); library("dplyr"); library("reshape"); library("R.matlab"); library("simpleboot"); library("car"); library("mlogit"); library("zoo"); library("lme4"); library("lmerTest"); library("robustlmm")
 library("ggplot2"); theme_set(theme_bw())
 ```
@@ -213,6 +214,7 @@ n_blocks_removed = nrow(subset(count_trials, few_trials))
 
 ## (6) Bad training performance
 bad_perf = read.csv("C:/Users/maria/MEGAsync/TrainingPlanningProject/allResults/XlabData2016/bad_perf.csv")
+bad_perf$session = factor(bad_perf$session, labels = c("Session 1", "Session 2"))
 ts = merge(ts, bad_perf, all.x = T)
 n_blocks_bad_training = 0
 if (do_exclude_bad_training_blocks) {
@@ -320,6 +322,7 @@ stay_dat$rel_stay_prob = with(stay_dat, stay_prob - mean_stay_prob)
 ```
 ```{r Switch-stay plots, echo = F, message = F, warning = F}
 
+stay_dat = merge(stay_dat, bad_perf, all.x = T)
 plot_dat = subset(stay_dat, !is.na(reward_prev_trial))
 
 stay_switch_plot_s1 = ggplot(subset(plot_dat, run != "Run 4"), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
@@ -347,6 +350,66 @@ if (ggsave_figures) {
   ggsave(plot = stay_switch_plot, filename = paste(figure_dir, "stay_switch_plot.png", sep = "/"), width = 5, height = 5)
   ggsave(plot = stay_switch_plot_s1, filename = paste(figure_dir, "stay_switch_plot_s1.png", sep = "/"), width = 5, height = 4)
 }
+```
+
+```{r Switch-stay differences by training, echo = F}
+# MB
+ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.5, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(catrb_median ~ run)
+
+ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2) & !is.na(ToL_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.5, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(ToL_median ~ run)
+
+# MF
+ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.58, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(catii_median ~ run)
+
+ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2) & !is.na(food_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.58, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(food_median ~ run)
+
+# co
+ggplot(subset(plot_dat, training_s1 == "co" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.5, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(num_median ~ run)
+
+ggplot(subset(plot_dat, training_s1 == "co" & run %in% paste("Run", 1:2) & !is.na(ori_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
+  stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
+  labs(x = "", y = "s1 stay probability", fill = "") +
+  coord_cartesian(ylim = c(.5, .82)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme(legend.position = "none") +
+  facet_grid(ori_median ~ run)
+
 ```
 ```{r Daws subject-wise logistic regression, echo = F}
 if (preprocess_data) {
@@ -584,6 +647,8 @@ class_lagged_effects         = read.csv(file.path(regression_dir, paste("class_l
 lagged_switch_stay           = read.csv(file.path(regression_dir, paste("lagged_switch_stay_", data_source, ".csv", sep = "")))
 lagged_switch_stay_stage2    = read.csv(file.path(regression_dir, paste("lagged_switch_stay_stage2_", data_source, ".csv", sep = "")))
 new_lagged_effects           = read.csv(file.path(regression_dir, paste("new_lagged_effects_", data_source, ".csv", sep = "")))
+
+lagged_switch_stay = merge(lagged_switch_stay, bad_perf, all.x = T)
 ```
 ```{r Plot results of lagged regression, echo = F}
 
@@ -692,6 +757,76 @@ gg_lagged_logodds_6 = ggplot(new_lagged_regr_plot_dat, aes(lag, log_odds, color 
   facet_grid(training_s1 ~ run, scales = "free_y")
 gg_lagged_logodds_6
 ```
+```{r Influence of training on lagged regression, echo = F}
+
+# Lagged stay probabilities
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(catrb_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ catrb_median)
+
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ToL_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ ToL_median)
+
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(catii_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ catii_median)
+
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(food_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ food_median)
+
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(num_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ num_median)
+
+ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ori_median)), aes(lag, stay_percent, color = condition)) +
+  geom_hline(yintercept = 0, color = "grey") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = condition)) +
+  scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
+  scale_x_continuous(breaks = -1:-10) +
+  theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
+  labs(x = "Lag", y = "Stay trials (%)", color = "") +
+  facet_grid(training_s1 ~ run, scales = "free_y") +
+  facet_wrap(~ ori_median)
+
+```
 ```{r Manipulation Check plot, echo = F, fig.cap = "Manipulation Check: Are those1st-stage fractals chosen more often that led to better 2nd-stage fractals in the past?"}
 gg_manipcheck
 ```
@@ -700,23 +835,26 @@ gg_manipcheck
 
 ```{r Read in parameter data, echo = F, results = F, warning = F, message = F}
 
-### Read in data frames for all combinations of parameters
 ts_colnames = c("SubjID", "run", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "NLL", "BIC", "AIC")
-ts_params = data.frame()
-
 if (preprocess_data) {
+  ts_params = data.frame()
+  
   # Read in Klaus' .mat file
   mat_file = readMat(file.path(model_dir, "KlausModelingResults.mat"))$d
   for (num_par in c(4, 6, 7)) {
+    
     # Set up stuff for the normal model with 4 parameters (par.hat4) and the hierarchical model with 4 parameters (G2par.hat4)
     par.hats = paste(c("par.hat", "G2par.hat"), num_par, sep = "")
     BICs = paste(c("X", "G2"), num_par, sep = "")
+    
     # Get info of one subject after the other from mat_file
     for (fileid in (1:dim(mat_file)[3])) {
       subj_file = mat_file[,,fileid]
       subjID = subj_file$no
+      
       # Read in normal model (1), then hierarchical model (2)
       for (hier in 1:2) {
+        
         # Read in runs 1-4
         for (run in 1:4) {
           par4 = subj_file[[paste("two.step", run, sep = "")]][,,1][[par.hats[hier]]]
@@ -725,8 +863,10 @@ if (preprocess_data) {
           if (is.null(par4)) {
             par4 = BIC = AIC = NA
           }
+          
           # Get all the info in a vector
-          subj_par4 = c(subjID, run, par4[1], NA, par4[2], NA, 0, par4[4], par4[3], NA, NA, BIC, AIC, hier, num_par)
+          subj_par4 = c(subjID, run, par4[1], NA, NA, NA, 0, par4[num_par], par4[num_par-1], NA, NA, BIC, AIC, hier, num_par)   # I'm just taking a1, p, and w for now because the orders of the other parameters differ by models
+          
           # Add to ts_params
           ts_params = rbind(ts_params, subj_par4)
         }
@@ -734,7 +874,7 @@ if (preprocess_data) {
     }
   }
   colnames(ts_params) = c(ts_colnames, "params", "num_par")
-  ts_params$params = paste("klaus", ifelse(ts_params$params == 1, "hier", "flat"), ts_params$num_par, sep = "_")
+  ts_params$params = paste("klaus", ifelse(ts_params$params == 1, "flat", "hier"), ts_params$num_par, sep = "_")
   ts_params$session = paste("Session", ifelse(ts_params$run %in% 1:2, 1, 2))
   write.csv(ts_params, file.path(model_dir, "KlausModelingResults.csv"), row.names = F)
 }
@@ -774,7 +914,7 @@ ts_params = add_group_columns(ts_params)
 ts_params = merge(ts_params, bad_perf, all.x = T)
 if (do_exclude_trials) {
   
-  # Exclude the same subject that have been excluded from behavioral analyses
+  # Exclude the same subjects that have been excluded from behavioral analyses
   included_subj = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
   ts_params = merge(ts_params, included_subj, all.y = T)   # all.y = T -> all rows are removed from x (ts_params), which are not also present in y (included_subj)
   
@@ -804,6 +944,10 @@ gg_w_flat_hier = ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_hier_4)) +
   geom_smooth(method = "lm")
 gg_w_flat_hier
 
+ggplot(w_molten, aes(w.klaus_flat_6, w.hyb)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
 gg_w_k_m = ggplot(w_molten, aes(w.klaus_flat_4, w.l0)) +
   geom_point() +
   geom_smooth(method = "lm")
@@ -813,6 +957,11 @@ gg_w_hyb_l0 = ggplot(w_molten, aes(w.hyb, w.l0)) +
   geom_point() +
   geom_smooth(method = "lm")
 gg_w_hyb_l0
+
+gg_w_hier_46 = ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_flat_6)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+gg_w_hier_46
 
 gg_w_hier_46 = ggplot(w_molten, aes(w.klaus_hier_4, w.klaus_hier_6)) +
   geom_point() +
@@ -868,27 +1017,14 @@ gg_a_hyb_l0 = ggplot(a_molten, aes(a1.hyb, a1.l0)) +
   geom_smooth(method = "lm") +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
 gg_a_hyb_l0
-
-b_molten = reshape(subset(ts_params, select = c("SubjID", "run", "b1", "params")),
-                   idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
-
-gg_b_flat_hier = ggplot(b_molten, aes(b1.klaus_flat_4, b1.klaus_hier_4)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-gg_b_flat_hier
-
-gg_b_k_m = ggplot(b_molten, aes(b1.klaus_flat_4, b1.l0)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-gg_b_k_m
 ```
 ```{r Compare RL model parameters and switch-stay interaction terms, echo = F}
 params_regr_dat = merge(subset(logist_regr_data_with_rep, effect == "int", select = -AIC), ts_params)
 
-ggplot(subset(params_regr_dat, params %in% c("klaus_flat_4", "klaus_hier_4", "l0") & odds < 5 & odds > -5), aes(w, odds)) +
+ggplot(subset(params_regr_dat, params %in% c("klaus_flat_4", "klaus_hier_4", "klaus_flat_6", "klaus_hier_6", "l0", "hyb") & odds < 5 & odds > -5), aes(w, odds)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_grid(~ params)
+  facet_grid( ~ params)
 ```
 ```{r Prepare relative BICs, echo = F}
 
@@ -1025,8 +1161,21 @@ wilcox.test(rel_AIC$l1)
 ```
 ```{r Plot parameters by training and run, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
-selected_parameter_dat = subset(ts_params_molten, params == "klaus_hier_4" & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"), select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate"))   # params == "l1"
-source("C:/Users/maria/MEGAsync/Berkeley/R scripts/sequentialset/FUNCTIONS/mean.cl.boot.R")
+selected_parameter_dat = subset(ts_params_molten,
+                                params %in% c("hyb", "l0", "klaus_hier_4", "klaus_flat_4", "klaus_hier_6", "klaus_flat_6") & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"),
+                                select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate", "params"))   # params == "l1"
+
+gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
+  geom_point(position = "jitter",alpha = .2) + #
+  # geom_line(alpha = .2, aes(group = SubjID)) +
+  labs(x = "", y = "Parameter w") +
+  # coord_cartesian(ylim = c(0, 1)) +
+  facet_grid(training_s1 ~ params) +
+  theme(legend.position = "none")
+gg_w_s1
+
+selected_parameter_dat = subset(selected_parameter_dat, params == "l0")
 
 gg_params_s1 =
   ggplot(subset(selected_parameter_dat, run != "Run 4"), aes(parameter, estimate, color = parameter != "w")) +
@@ -1040,16 +1189,6 @@ gg_params_s1
 
 gg_params = gg_params_s1 +
   facet_grid(training ~ run)
-
-gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  # geom_point(alpha = .2) + #position = "jitter", 
-  # geom_line(alpha = .2, aes(group = SubjID)) +
-  labs(x = "", y = "Parameter w") +
-  # coord_cartesian(ylim = c(0, 1)) +
-  facet_grid(training_s1 ~ .) +
-  theme(legend.position = "none")
-gg_w_s1
 
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
@@ -1156,68 +1295,179 @@ Anova(params_rel_mod, type = 3)
 
 ```{r Training performance -> MB?, echo = F}
 # Prepare data
-ts_plot_dat = subset(ts_params, grepl("klaus", params))
+ts_plot_dat = subset(ts_params, params %in% c("l0", "klaus_hier_4", "klaus_flat_4"),
+                     select = -c(NLL, BIC, AIC, num_par, a1, a2, b1, b2, l, p, k, n_trials))
+ts_plot_dat1 = subset(ts_plot_dat, run == "Run 1")
+ts_plot_dat2 = subset(ts_plot_dat, run == "Run 2")
+ts_plot_dat3 = subset(ts_plot_dat, run == "Run 3")
+ts_plot_dat4 = subset(ts_plot_dat, run == "Run 4")
+ts_plot_dat_wide = merge(subset(ts_plot_dat1, select = -run),
+                         subset(ts_plot_dat2, select = -run),
+                         by = c("SubjID", "training_s1", "params"), suffixes = c("_1", "_2"), all = T)
+ts_plot_dat_wide = merge(ts_plot_dat_wide,
+                         subset(ts_plot_dat3, select = -run), all = T)
+ts_plot_dat_wide = merge(ts_plot_dat_wide,
+                         subset(ts_plot_dat4, select = -run),
+                         by = c("SubjID", "training_s1", "params"),
+                         suffixes = c("_3", "_4"))
+ts_plot_dat_wide$dw12 = with(ts_plot_dat_wide, w_2 - w_1)
+ts_plot_dat_wide$dw13 = with(ts_plot_dat_wide, w_3 - w_1)
+ts_plot_dat_wide$dw14 = with(ts_plot_dat_wide, w_4 - w_1)
+ts_plot_dat = merge(ts_plot_dat, subset(ts_plot_dat_wide, select = c("SubjID", "dw12", "dw13", "dw14", "params")), all.x = T)
+ts_plot_dat = subset(ts_plot_dat, run %in% paste("Run", 1:2))
 
 # MB Category
 ggplot(ts_plot_dat, aes(catrb_ACC, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catrb_ACC, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catrb_ACC, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catrb_ACC, dw14, color = training)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 # ToL
 ggplot(ts_plot_dat, aes(ToL_noptim, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(ToL_noptim, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(ToL_noptim, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(ToL_noptim, dw14, color = training)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 # MF Category
 ggplot(ts_plot_dat, aes(catii_ACC, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catii_ACC, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catii_ACC, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(catii_ACC, dw14, color = training)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 # Food
 ggplot(ts_plot_dat, aes(food_ncor, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(food_ncor, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(food_ncor, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(food_ncor, dw14, color = training)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 # Orientation
 ggplot(ts_plot_dat, aes(ori_ACC, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(ori_ACC, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(ori_ACC, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 # Number comparsion
 ggplot(ts_plot_dat, aes(num_ACC, w)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_wrap(~ params, scales = "free_y")
+  facet_grid(run ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(num_ACC, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+ggplot(ts_plot_dat, aes(num_ACC, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
 ```
-```{r ToL performance -> MB, echo = F}
 
-# ToL performance => model-based strategy!
-# Who are the people who still show model-based strategies after depletion?
-# ttest_dat$estimate_f = "low"; ttest_dat$estimate_f[ttest_dat$estimate >= 0.5] = "high"
-# subset(ttest_dat, estimate_f == "low" & depletion == "Model-based training")$SubjID
-# subset(ttest_dat, estimate_f == "high" & depletion == "Model-based training")$SubjID
-# by(ttest_dat$ToL_MadeMin, list(ttest_dat$depletion, ttest_dat$estimate_f), mean, na.rm = T)
-# by(ttest_dat$ToL_MadeEstim, list(ttest_dat$depletion, ttest_dat$estimate_f), mean, na.rm = T)
-# by(ttest_dat$Lab_ACC, list(ttest_dat$depletion, ttest_dat$estimate_f), mean, na.rm = T)
-# => In the Model-based training, people with w > 0.5 have ToL scores of 1.1 (MadeMin) and 1.1 (MadEstim); people with w < 0.5 have scores of 2 (MadeMind) and 2.9 (MadeEstim). It looks like people who perform better at ToL (lower scores) show more model-based strategies in the 2-step task. (There is no difference for LAB performance: high-w group = 66.2%; low-w group = 65.5%)
+```{r Long-term training effects, echo = F}
 
-# t.test(with(ttest_dat[ttest_dat$depletion == "Model-free training",], ToL_MadeMin ~ estimate_f))
-# t.test(with(ttest_dat[ttest_dat$depletion == "Model-free training",], ToL_MadeEstim ~ estimate_f))
-# => 2-step w predicts ToL performance! In the Model-free training, subjects with w > 0.5 in session 1 made only 0.8 Tol_MadeMin errors in session 2. Subjects with w < 0.5 made 1.7 errors. Same for MadeEstim: session1 w > 0.5 leads to 0.5 errors, session1 w < 0.5 leads to 2.1 errors.
+# Run3, w of mbmb vs mbmf people: 
 
-# That means I should control for ToL performance somehow. Maybe median-split based on ToL performance and then compare above-average Model-based training with above-average Model-free training and below-average exp with below-average contr? Or better: Regression w ~ ToL, build model and see if exp group deviates from the model in the opposite direction than contr group!
+# ToL
+ggplot(ts_plot_dat, aes(ToL_noptim, w)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(run ~ params, scales = "free_y")
 
-### Regression: **w** predicted by ToL score
-# baseline_model  = lme(estimate ~ 1, random = ~1|depletion/SubjID, data = subset(selected_parameter_dat, session == "Session 1" & parameter == "w" & !is.na(ToL_MadeMin)), method = "ML")
-# ToL_model       = update(baseline_model, .~. + ToL_MadeMin)
-# summary(ToL_model)                       # At the moment, there are many NA's in the ToL data; beta = -0.20, i.e., one additional move slower than optimal in ToL makes your w 0.2 smaler!
-# ToL_aov = anova(baseline_model, ToL_model)
-# ToL_aov
+ggplot(ts_plot_dat, aes(ToL_noptim, dw12)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
 
+ggplot(ts_plot_dat, aes(ToL_noptim, dw13)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid( ~ params, scales = "free_y")
+
+```
+
+```{r Regression model about that, echo = F}
+# dw12 ~ catrb * ToL + catii * food + ori * num
+ts_cor_dat = subset(ts_plot_dat, session == "Session 1" & params == "l0" & run == "Run 1")
+
+cor.test(~ dw12 + catrb_ACC, data = subset(ts_cor_dat, training_s1 == "mb"), na.rm = T)
+cor.test(~ dw12 + ToL_noptim, data = subset(ts_cor_dat, training_s1 == "mb"), na.rm = T)
+
+cor.test(~ dw12 + catii_ACC, data = subset(ts_cor_dat, training_s1 == "mf"), na.rm = T)
+cor.test(~ dw12 + food_ncor, data = subset(ts_cor_dat, training_s1 == "mf"), na.rm = T)
+
+cor.test(~ dw12 + num_ACC, data = subset(ts_cor_dat, training_s1 == "co"), na.rm = T)
+cor.test(~ dw12 + ori_ACC, data = subset(ts_cor_dat, training_s1 == "co"), na.rm = T)
+```
+```{r Last run button, echo = F}
 ```

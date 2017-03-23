@@ -73,18 +73,22 @@ gg_made_min
 
 # In which towers did a subject go over?
 ToL$OptimSolution = ToL$MadeMoves == ToL$MinMoves
-ToL_sum = ddply(ToL, .(SubjID, run, training), summarize, n_optim = sum(OptimSolution))
+ToL$session[ToL$run %in% paste("Run", 1:2)] = 1
+ToL$session[ToL$run %in% paste("Run", 3:4)] = 2
+ToL_sum = ddply(ToL,
+                .(SubjID, session, training), summarize,
+                n_optim = sum(OptimSolution))
+ToL_sum$ToL_median = ifelse(ToL_sum$n_optim > median(ToL_sum$n_optim, na.rm = T), "above", "below")
 
-gg_subj_optim_perf = ggplot(ToL_sum, aes(run, n_optim)) +
+gg_subj_optim_perf = ggplot(ToL_sum, aes(session, n_optim)) +
   stat_summary(fun.data = mean_cl_normal, geom = "bar", fill = "red") +
   geom_point(alpha = .5, position = "jitter") +
-  coord_cartesian(ylim = c(0, 5)) +
   labs(x = "", y = "# towers solved perfectly") +
   facet_wrap(~ training)
 gg_subj_optim_perf
 ```
 ```{r Create pad_perf, which will contain summary of behavior in all training tasks, echo = F, message = F, warning = F}
-bad_perf = subset(ToL_sum, select = c("SubjID", "run", "n_optim"))
+bad_perf = subset(ToL_sum, select = c("SubjID", "session", "n_optim", "ToL_median"))
 colnames(bad_perf)[colnames(bad_perf) == "n_optim"] = "ToL_noptim"
 ```
 ```{r Plot general aspects of ToL performance, echo = F, eval = F}
@@ -175,8 +179,8 @@ summary(trialwise_food_dat)
 break_trials = subset(trialwise_food_dat, n_cor == 0)$trial
 food_dat = subset(food_dat, !trial %in% break_trials)
     
-summary(food_dat)
 head(food_dat)
+summary(food_dat)
 ```
 ```{r Food performance over time, echo = F, message = F, warning = F}
 
@@ -192,23 +196,27 @@ gg_food_over_trials2 = ggplot(food_dat, aes(trial, rew_rec - rew_avail, color = 
   facet_wrap(~ run)
 gg_food_over_trials2
 
-sum_food_dat = ddply(food_dat, .(SubjID, run, training, training_s1), summarize,
+food_dat$session[food_dat$run %in% paste("Run", 1:2)] = 1
+food_dat$session[food_dat$run %in% paste("Run", 3:4)] = 2
+sum_food_dat = ddply(food_dat, .(SubjID, session, training, training_s1), summarize,
                      rew_rec = median(rew_rec, na.rm = T),
                      n_cor = median(n_cor, na.rm = T))
+sum_food_dat$food_median = ifelse(sum_food_dat$n_cor > median(sum_food_dat$n_cor, na.rm = T), "above", "below")
 summary(sum_food_dat)
 
-gg_food_over_trials3 = ggplot(sum_food_dat, aes(run, n_cor, group = 1)) +
+gg_food_over_trials3 = ggplot(sum_food_dat, aes(session, n_cor, group = 1)) +
   stat_summary(fun.y = median, color = "red", geom = "point") +
   geom_point(alpha = .2, position = "jitter") +
   labs(y = "av. # correct button presses / trial") +
   facet_wrap(~ training)
 gg_food_over_trials3
+
 ```
 ```{r Add food perf to bad_perf}
 
-bad_perf = merge(subset(sum_food_dat, select = c("SubjID", "run", "n_cor")),
+bad_perf = merge(subset(sum_food_dat, select = c("SubjID", "session", "n_cor", "food_median")),
                  bad_perf,
-                 by = c("SubjID", "run"),
+                 by = c("SubjID", "session"),
                  all = T)
 colnames(bad_perf)[colnames(bad_perf) == "n_cor"] = "food_ncor"
 summary(bad_perf)
@@ -219,7 +227,7 @@ summary(bad_perf)
 gg_food_by_subj = ggplot(food_dat, aes(SubjID, n_cor, group = SubjID, color = training)) +
   stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
   labs(y = "# correct button presses / trial") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_food_by_subj
 
 ```
@@ -291,27 +299,25 @@ gg_cat_over_trials = ggplot(cat_dat, aes(trial, 100 * ACC, color = training, gro
 gg_cat_over_trials
 
 gg_cat_over_trials = ggplot(cat_dat, aes(trial, RT / 1000, color = training, group = training)) +
-  stat_summary(fun.data = mean_cl_boot, geom = "pointrange", alpha = .5) +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange", alpha = .5) +
   labs(y = "RT (sec)") +
   facet_grid(task ~ run)
 gg_cat_over_trials
 
-sum_cat_dat = ddply(cat_dat, .(SubjID, run, task, training, training_s1), summarize,
+cat_dat$session[cat_dat$run %in% paste("Run", 1:2)] = 1
+cat_dat$session[cat_dat$run %in% paste("Run", 3:4)] = 2
+sum_cat_dat = ddply(cat_dat, .(SubjID, session, task, training, training_s1), summarize,
                     ACC = mean(ACC, na.rm = T),
                     RT = median(RT, na.rm = T))
-finalACC = ddply(subset(cat_dat, trial >= 90), .(SubjID, run, task, training, training_s1), summarize,
-                 finACC = mean(ACC, na.rm = T))
-sum_cat_dat = merge(sum_cat_dat, finalACC)
-ii_trials = subset(sum_cat_dat, task == "ii")$finACC
+ii_trials = subset(sum_cat_dat, task == "ii")$ACC
 ii_median = median(ii_trials, na.rm = T)
-sum_cat_dat$median[sum_cat_dat$task == "ii"] = ifelse(ii_trials > ii_median, "above", "below")
-rb_trials = subset(sum_cat_dat, task == "rb")$finACC
+sum_cat_dat$cat_median[sum_cat_dat$task == "ii"] = ifelse(ii_trials > ii_median, "above", "below")
+rb_trials = subset(sum_cat_dat, task == "rb")$ACC
 rb_median = median(rb_trials, na.rm = T)
-sum_cat_dat$median[sum_cat_dat$task == "rb"] = ifelse(rb_trials > rb_median, "above", "below")
-sum_cat_dat$median = factor(sum_cat_dat$median)
+sum_cat_dat$cat_median[sum_cat_dat$task == "rb"] = ifelse(rb_trials > rb_median, "above", "below")
 summary(sum_cat_dat)
 
-gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(run, 100 * ACC, group = 1, color = task)) +
+gg_cat_over_trials3 = ggplot(sum_cat_dat, aes(session, 100 * ACC, group = 1, color = task)) +
   stat_summary(fun.y = mean, geom = "point", color = "black") +
   geom_point(alpha = .5, position = "jitter") +
   geom_hline(yintercept = 25) +
@@ -321,14 +327,14 @@ gg_cat_over_trials3
 ```
 ```{r Add cat perf to bad_perf, echo = F, message = F, warning = F}
 bad_perf = merge(bad_perf,
-                 subset(sum_cat_dat, task == "ii", select = c("SubjID", "run", "ACC", "finACC", "median")),
+                 subset(sum_cat_dat, task == "ii", select = c("SubjID", "session", "ACC", "cat_median")),
                  all = T)
-colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "finACC", "median")] = c("catii_ACC", "catii_finACC", "catii_median")
+colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "cat_median")] = c("catii_ACC", "catii_median")
 
 bad_perf = merge(bad_perf,
-                 subset(sum_cat_dat, task == "rb", select = c("SubjID", "run", "ACC", "finACC", "median")),
+                 subset(sum_cat_dat, task == "rb", select = c("SubjID", "session", "ACC", "cat_median")),
                  all = T)
-colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "finACC", "median")] = c("catrb_ACC", "catrb_finACC", "catrb_median")
+colnames(bad_perf)[colnames(bad_perf) %in% c("ACC", "cat_median")] = c("catrb_ACC", "catrb_median")
 
 ```
 ```{r Category performance by subject, echo = F, message = F, warning = F}
@@ -398,12 +404,15 @@ gg_ori_over_trials = ggplot(ori_dat, aes(trial, 100 * ACC, color = training, gro
   facet_grid( ~ run)
 gg_ori_over_trials
 
-sum_ori_dat = ddply(ori_dat, .(SubjID, run, training, training_s1), summarize,
+ori_dat$session[ori_dat$run %in% paste("Run", 1:2)] = 1
+ori_dat$session[ori_dat$run %in% paste("Run", 3:4)] = 2
+sum_ori_dat = ddply(ori_dat, .(SubjID, session, training, training_s1), summarize,
                     ACC = mean(ACC, na.rm = T),
                     RT = median(RT, na.rm = T))
+sum_ori_dat$ori_median = ifelse(sum_ori_dat$ACC > median(sum_ori_dat$ACC, na.rm = T), "above", "below")
 summary(sum_ori_dat)
 
-gg_ori_over_trials3 = ggplot(sum_ori_dat, aes(run, 100 * ACC, group = 1)) +
+gg_ori_over_trials3 = ggplot(sum_ori_dat, aes(session, 100 * ACC, group = 1, color = ori_median)) +
   stat_summary(fun.y = mean, geom = "point", color = "black") +
   geom_point(alpha = .5, position = "jitter") +
   geom_hline(yintercept = 50) +
@@ -412,7 +421,7 @@ gg_ori_over_trials3
 ```
 ```{r Add ori perf to bad_perf, echo = F, message = F, warning = F}
 bad_perf = merge(bad_perf,
-                 subset(sum_ori_dat, select = c("SubjID", "run", "ACC")),
+                 subset(sum_ori_dat, select = c("SubjID", "session", "ACC", "ori_median")),
                  all = T)
 colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "ori_ACC"
 
@@ -466,20 +475,24 @@ gg_num_over_trials = ggplot(num_dat, aes(trial, 100 * ACC, color = training, gro
   facet_grid( ~ run)
 gg_num_over_trials
 
-sum_num_dat = ddply(num_dat, .(SubjID, run, training, training_s1), summarize,
+num_dat$session[num_dat$run %in% paste("Run", 1:2)] = 1
+num_dat$session[num_dat$run %in% paste("Run", 3:4)] = 2
+sum_num_dat = ddply(num_dat, .(SubjID, session, training, training_s1), summarize,
                     ACC = mean(ACC, na.rm = T))
+sum_num_dat$num_median = ifelse(sum_num_dat$ACC > median(sum_num_dat$ACC, na.rm = T), "above", "below")
 summary(sum_num_dat)
 
-gg_num_over_trials3 = ggplot(sum_num_dat, aes(run, 100 * ACC, group = 1)) +
+gg_num_over_trials3 = ggplot(sum_num_dat, aes(session, 100 * ACC, group = 1, color = num_median)) +
   stat_summary(fun.y = mean, geom = "point", color = "black") +
   geom_point(alpha = .5, position = "jitter")
 gg_num_over_trials3
 ```
 ```{r Add num perf to bad_perf, echo = F, message = F, warning = F}
 bad_perf = merge(bad_perf,
-                 subset(sum_num_dat, select = c("SubjID", "run", "ACC")),
+                 subset(sum_num_dat, select = c("SubjID", "session", "ACC", "num_median")),
                  all = T)
 colnames(bad_perf)[colnames(bad_perf) == "ACC"] = "num_ACC"
+head(bad_perf)
 summary(bad_perf)
 ```
 
@@ -506,52 +519,52 @@ bad_perf = read.csv(file.path(data_dir, "bad_perf.csv"))
 ```{r Plot performance in tasks of the same session against each other, echo = F, message = F, warning = F}
 
 # mf
-gg_mftasks = ggplot(bad_perf, aes(food_ncor, 100 * catii_ACC, color = training, group = run)) +
+gg_mftasks = ggplot(bad_perf, aes(food_ncor, 100 * catii_ACC, color = training, group = session)) +
   geom_point() +
   labs(x = "Food task (# correct buttons / trial)", y = "Category task ii (% correct trials)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_mftasks
 
 # mb
-gg_mbtasks = ggplot(bad_perf, aes(ToL_noptim, catrb_ACC, color = training, group = run)) +
+gg_mbtasks = ggplot(bad_perf, aes(ToL_noptim, catrb_ACC, color = training, group = session)) +
   geom_point(alpha = .5) +
   labs(x = "Tower of London (# optimal solutions / 5)", y = "Category task rb (% correct trials)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_mbtasks
 
 # co
-gg_mbtasks = ggplot(bad_perf, aes(ori_ACC, num_ACC, color = training, group = run)) +
+gg_mbtasks = ggplot(bad_perf, aes(ori_ACC, num_ACC, color = training, group = session)) +
   geom_point(alpha = .5) +
   labs(x = "Orientation discrimination (% correct)", y = "Number comparison (% correct)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_mbtasks
 
 ## Excluding participants with bad performance in these tasks
 # mf
-gg_mftasks = ggplot(subset(bad_perf, !(food_bad | catii_bad)), aes(food_ncor, 100 * catii_ACC, color = training, group = run)) +
+gg_mftasks = ggplot(subset(bad_perf, !(food_bad | catii_bad)), aes(food_ncor, 100 * catii_ACC, color = training, group = session)) +
   geom_point() +
   labs(x = "Food task (# correct buttons / trial)", y = "Category task ii (% correct trials)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_mftasks
 
 # mb
-gg_mbtasks = ggplot(subset(bad_perf, !(ToL_bad | catrb_bad)), aes(ToL_noptim, catrb_ACC, color = training, group = run)) +
+gg_mbtasks = ggplot(subset(bad_perf, !(ToL_bad | catrb_bad)), aes(ToL_noptim, catrb_ACC, color = training, group = session)) +
   geom_point(alpha = .5) +
   labs(x = "Tower of London (# optimal solutions / 5)", y = "Category task rb (% correct trials)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_mbtasks
 
 # control
-gg_cotasks = ggplot(subset(bad_perf, !(ori_bad | num_bad)), aes(ori_ACC, num_ACC, color = training, group = run)) +
+gg_cotasks = ggplot(subset(bad_perf, !(ori_bad | num_bad)), aes(ori_ACC, num_ACC, color = training, group = session)) +
   geom_point(alpha = .5) +
   labs(x = "Orientation discrimination (% correct)", y = "Number comparison (% correct)") +
   geom_smooth(method = lm, se = F, color = "black") +
-  facet_wrap(~ run)
+  facet_wrap(~ session)
 gg_cotasks
 ```
 
