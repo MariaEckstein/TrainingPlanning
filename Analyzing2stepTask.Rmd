@@ -357,7 +357,7 @@ if (ggsave_figures) {
 ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Rule-based category learning") +
   coord_cartesian(ylim = c(.5, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -366,7 +366,7 @@ ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2)), aes(r
 ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2) & !is.na(ToL_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Tower of London") +
   coord_cartesian(ylim = c(.5, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -376,7 +376,7 @@ ggplot(subset(plot_dat, training_s1 == "mb" & run %in% paste("Run", 1:2) & !is.n
 ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Information-integration category learning") +
   coord_cartesian(ylim = c(.58, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -385,7 +385,7 @@ ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2)), aes(r
 ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2) & !is.na(food_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Food task") +
   coord_cartesian(ylim = c(.58, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -395,7 +395,7 @@ ggplot(subset(plot_dat, training_s1 == "mf" & run %in% paste("Run", 1:2) & !is.n
 ggplot(subset(plot_dat, training_s1 == "co" & run %in% paste("Run", 1:2)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Number comparison task") +
   coord_cartesian(ylim = c(.5, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -404,7 +404,7 @@ ggplot(subset(plot_dat, training_s1 == "co" & run %in% paste("Run", 1:2)), aes(r
 ggplot(subset(plot_dat, training_s1 == "co" & run %in% paste("Run", 1:2) & !is.na(ori_median)), aes(reward_prev_trial, stay_prob, fill = transi_prev_trial)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "dodge") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = "position_dodge"(width = 0.9)) +
-  labs(x = "", y = "s1 stay probability", fill = "") +
+  labs(x = "", y = "s1 stay probability", fill = "", title = "Orientation discrimination task") +
   coord_cartesian(ylim = c(.5, .82)) +
   scale_fill_manual(values = c("blue", "red")) +
   theme(legend.position = "none") +
@@ -767,9 +767,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(catrb_median)), aes(la
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ catrb_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Rule-based category learning") +
+  facet_grid(catrb_median ~ run, scales = "free_y")
 
 ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ToL_median)), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -778,9 +777,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ToL_median)), aes(lag,
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ ToL_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Tower of London") +
+  facet_grid(ToL_median ~ run, scales = "free_y")
 
 ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(catii_median)), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -789,9 +787,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(catii_median)), aes(la
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ catii_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Information-integration category learning") +
+  facet_grid(catii_median ~ run, scales = "free_y")
 
 ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(food_median)), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -800,9 +797,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(food_median)), aes(lag
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ food_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Food task") +
+  facet_grid(food_median ~ run, scales = "free_y")
 
 ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(num_median)), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -811,9 +807,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(num_median)), aes(lag,
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ num_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Number comparison") +
+  facet_grid(num_median ~ run, scales = "free_y")
 
 ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ori_median)), aes(lag, stay_percent, color = condition)) +
   geom_hline(yintercept = 0, color = "grey") +
@@ -822,9 +817,8 @@ ggplot(subset(lagged_switch_stay, run != "Run 4" & !is.na(ori_median)), aes(lag,
   scale_color_manual(values = c("darkblue", "lightblue", "red", "pink")) +
   scale_x_continuous(breaks = -1:-10) +
   theme(legend.position = c(x, y), legend.justification = c(x, y), legend.background = element_rect(fill = "transparent")) +
-  labs(x = "Lag", y = "Stay trials (%)", color = "") +
-  facet_grid(training_s1 ~ run, scales = "free_y") +
-  facet_wrap(~ ori_median)
+  labs(x = "Lag", y = "Stay trials (%)", color = "", title = "Orientation discrimiation") +
+  facet_grid(ori_median ~ run, scales = "free_y")
 
 ```
 ```{r Manipulation Check plot, echo = F, fig.cap = "Manipulation Check: Are those1st-stage fractals chosen more often that led to better 2nd-stage fractals in the past?"}
@@ -939,84 +933,71 @@ summary(ts_params_molten)
 w_molten = reshape(subset(ts_params, select = c("SubjID", "run", "w", "params")),
                    idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
 
-gg_w_flat_hier = ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_hier_4)) +
+ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_hier_4)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_flat_hier
 
 ggplot(w_molten, aes(w.klaus_flat_6, w.hyb)) +
   geom_point() +
   geom_smooth(method = "lm")
 
-gg_w_k_m = ggplot(w_molten, aes(w.klaus_flat_4, w.l0)) +
+ggplot(w_molten, aes(w.klaus_flat_4, w.l0)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_k_m
 
-gg_w_hyb_l0 = ggplot(w_molten, aes(w.hyb, w.l0)) +
+ggplot(w_molten, aes(w.hyb, w.l0)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_hyb_l0
 
-gg_w_hier_46 = ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_flat_6)) +
+ggplot(w_molten, aes(w.klaus_flat_4, w.klaus_flat_6)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_hier_46
 
-gg_w_hier_46 = ggplot(w_molten, aes(w.klaus_hier_4, w.klaus_hier_6)) +
+ggplot(w_molten, aes(w.klaus_hier_4, w.klaus_hier_6)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_hier_46
 
-gg_w_hier_47 = ggplot(w_molten, aes(w.klaus_hier_4, w.klaus_hier_7)) +
+ggplot(w_molten, aes(w.klaus_hier_4, w.klaus_hier_7)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_hier_47
 
-gg_w_hier_67 = ggplot(w_molten, aes(w.klaus_hier_6, w.klaus_hier_7)) +
+ggplot(w_molten, aes(w.klaus_hier_6, w.klaus_hier_7)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_w_hier_67
 
 p_molten = reshape(subset(ts_params, select = c("SubjID", "run", "p", "params")),
                    idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
 
-gg_p_flat_hier = ggplot(p_molten, aes(p.klaus_flat_4, p.klaus_hier_4)) +
+ggplot(p_molten, aes(p.klaus_flat_4, p.klaus_hier_4)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_p_flat_hier
 
-gg_p_k_m = ggplot(p_molten, aes(p.klaus_flat_4, p.l0)) +
+ggplot(p_molten, aes(p.klaus_flat_4, p.l0)) +
   geom_point() +
   geom_smooth(method = "lm")
-gg_p_k_m
 
-gg_p_hyb_l0 = ggplot(p_molten, aes(p.hyb, p.l0)) +
+ggplot(p_molten, aes(p.hyb, p.l0)) +
   geom_point() +
   geom_smooth(method = "lm") +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
-gg_p_hyb_l0
 
 a_molten = reshape(subset(ts_params, select = c("SubjID", "run", "a1", "params")),
                    idvar = c("SubjID", "run"), timevar = "params", direction = "wide")
 
-gg_a_flat_hier = ggplot(a_molten, aes(a1.klaus_flat_4, a1.klaus_hier_4)) +
+ggplot(a_molten, aes(a1.klaus_flat_4, a1.klaus_hier_4)) +
   geom_point() +
   geom_smooth(method = "lm") +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
-gg_a_flat_hier
 
-gg_a_k_m = ggplot(a_molten, aes(a1.klaus_flat_4, a1.l0)) +
+ggplot(a_molten, aes(a1.klaus_flat_4, a1.l0)) +
   geom_point() +
   geom_smooth(method = "lm") +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
-gg_a_k_m
 
-gg_a_hyb_l0 = ggplot(a_molten, aes(a1.hyb, a1.l0)) +
+ggplot(a_molten, aes(a1.hyb, a1.l0)) +
   geom_point() +
   geom_smooth(method = "lm") +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
-gg_a_hyb_l0
 ```
 ```{r Compare RL model parameters and switch-stay interaction terms, echo = F}
 params_regr_dat = merge(subset(logist_regr_data_with_rep, effect == "int", select = -AIC), ts_params)
@@ -1167,7 +1148,6 @@ selected_parameter_dat = subset(ts_params_molten,
 
 gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  geom_point(position = "jitter",alpha = .2) + #
   # geom_line(alpha = .2, aes(group = SubjID)) +
   labs(x = "", y = "Parameter w") +
   # coord_cartesian(ylim = c(0, 1)) +
@@ -1195,6 +1175,17 @@ if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
   ggsave(file.path(figure_dir, "gg_w_s1.png"), gg_w_s1, width = 2, height = 4)
 }
+
+gg_w_s1 +
+  geom_point(position = "jitter",alpha = .2)
+
+ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
+  # geom_line(alpha = .2, aes(group = SubjID)) +
+  labs(x = "", y = "Parameter w") +
+  # coord_cartesian(ylim = c(0, 1)) +
+  facet_grid( ~ training_s1) +
+  theme(legend.position = "none")
 ```
 ```{r Regression model w ~ run * training, echo = F}
 
@@ -1203,9 +1194,9 @@ mod_dat$run = factor(mod_dat$run)
 mod_dat$SubjID = factor(mod_dat$SubjID)
 mod_dat$parameter = factor(mod_dat$parameter)
 contrasts(mod_dat$run) = contr.poly(3)
-c_vs_train = c(-2, 1, 1)
-mb_vs_mf = c(0, -1, 1)
-contrasts(mod_dat$training_s1) = cbind(c_vs_train, mb_vs_mf)
+mf_vs_rest = c(1, 1, -2)
+co_vs_mb = c(-1, 1, 0)
+contrasts(mod_dat$training_s1) = cbind(mf_vs_rest, mb_vs_mf)
 
 params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
      data = mod_dat,
@@ -1213,6 +1204,9 @@ params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
      REML = F)
 summary(params_mod)
 Anova(params_mod, type = 3)
+
+### Should run another model on the changes!
+# dw12 ~ training_s1
 ```
 ```{r Calculate parameter changes from run 1 to runs 2 and 3, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
 
@@ -1293,7 +1287,7 @@ Anova(params_rel_mod, type = 3)
 
 # Relation between training tasks and 2-step
 
-```{r Training performance -> MB?, echo = F}
+```{r Training performance and MB, echo = F}
 # Prepare data
 ts_plot_dat = subset(ts_params, params %in% c("l0", "klaus_hier_4", "klaus_flat_4"),
                      select = -c(NLL, BIC, AIC, num_par, a1, a2, b1, b2, l, p, k, n_trials))
@@ -1315,6 +1309,17 @@ ts_plot_dat_wide$dw13 = with(ts_plot_dat_wide, w_3 - w_1)
 ts_plot_dat_wide$dw14 = with(ts_plot_dat_wide, w_4 - w_1)
 ts_plot_dat = merge(ts_plot_dat, subset(ts_plot_dat_wide, select = c("SubjID", "dw12", "dw13", "dw14", "params")), all.x = T)
 ts_plot_dat = subset(ts_plot_dat, run %in% paste("Run", 1:2))
+
+# Overall
+ggplot(ts_plot_dat, aes(training_s1, dw12)) +
+  stat_summary(geom = "bar", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
+  # geom_point(alpha = .2, position = "jitter") +
+  stat_summary(geom = "pointrange", fun.data = mean_cl_normal, fun.args = list(mult = 1))
+
+ggplot(ts_plot_dat, aes(training_s1, dw13)) +
+  stat_summary(geom = "bar", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
+  # geom_point(alpha = .2, position = "jitter") +
+  stat_summary(geom = "pointrange", fun.data = mean_cl_normal, fun.args = list(mult = 1))
 
 # MB Category
 ggplot(ts_plot_dat, aes(catrb_ACC, w)) +
@@ -1434,29 +1439,7 @@ ggplot(ts_plot_dat, aes(num_ACC, dw13)) +
 
 ```
 
-```{r Long-term training effects, echo = F}
-
-# Run3, w of mbmb vs mbmf people: 
-
-# ToL
-ggplot(ts_plot_dat, aes(ToL_noptim, w)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  facet_grid(run ~ params, scales = "free_y")
-
-ggplot(ts_plot_dat, aes(ToL_noptim, dw12)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  facet_grid( ~ params, scales = "free_y")
-
-ggplot(ts_plot_dat, aes(ToL_noptim, dw13)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  facet_grid( ~ params, scales = "free_y")
-
-```
-
-```{r Regression model about that, echo = F}
+```{r Stats on that, echo = F}
 # dw12 ~ catrb * ToL + catii * food + ori * num
 ts_cor_dat = subset(ts_plot_dat, session == "Session 1" & params == "l0" & run == "Run 1")
 
