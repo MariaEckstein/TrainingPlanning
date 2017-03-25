@@ -24,15 +24,16 @@ output:
 
 After completing the experiment, some subjects reported that they had explored the reward probabilities of different *keys* rather than *fractals* in the 2-step task because they mistrusted the accuracy of the task instructions after receiving reward at a rather low rate. In addition, we had noticed during administration of the 2-step task that when getting tired, some subjects tended to repeat the same key for considerable durations, neglecting the task. To clean the data from both of these sources of noise, we decided to exclude all trials from the *switch-stay analysis*, in which the same key had been pressed more than 9 times in a row. (Removing these trials is justified because the probability that 10 consecutive trials required pressing the same key 10 times in a row is negligibly low, i.e., $0.5^{10} = `r round(0.5 ^ 10 * 100, 3)`$ percent). For the *parameter analysis*, an additional parameter $k$ was added to the model, which captured *key perseverance*. ($k$ is described in more detail below.) 
 
-```{r Set script parameters and load libraries, results = F, warning = F}
+```{r Set script parameters and load libraries, message = F, results = F, warning = F}
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
 use_Klaus_model = T                     # use Klaus' model fitting results?
 remove_run4 = F
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
 do_exclude_bad_training_blocks = F      # Exclude 2-step blocks that come from sessions with really bad training task performance?
-ggsave_figures = F                      # Save figures as pngs onto the computer?
+ggsave_figures = T                      # Save figures as pngs onto the computer?
 preprocess_data = F
+selected_model = "klaus_hier_4"
 home_dir = "C:/Users/maria/MEGAsync/TrainingPlanningProject"
 figure_dir = file.path(home_dir, "TwoStepTask/model/RLDM")
 model_dir = file.path(home_dir, "TwoStepTask/model")
@@ -430,7 +431,7 @@ logist_regr_data_with_correct = read.csv(file.path(regression_dir, paste("logist
 logist_regr_data_with_rep     = read.csv(file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")))
 ```
 ```{r Plot Daws subjectwise logistic regression, echo = F}
-gg_logreg_rticr_excl = ggplot(subset(logist_regr_data_with_rep, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
+ggplot(subset(logist_regr_data_with_rep, abs(odds) < quantile(abs(logist_regr_data$odds), .9, na.rm = T)), aes(effect, odds, fill = effect)) +
   # stat_summary(fun.y = "mean", geom = "bar") +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "errorbar", color = "blue") +
   geom_point(alpha = 0.7) + #position = "jitter") +
@@ -438,6 +439,13 @@ gg_logreg_rticr_excl = ggplot(subset(logist_regr_data_with_rep, abs(odds) < quan
   facet_grid(training_s1 ~ run) +
   theme(legend.position = "none") +
   labs(x = "", y = "Log odds", title = "outliers removed")
+
+ggplot(subset(logist_regr_data_with_rep, effect %in% c("rew", "sta", "int")), aes(run, odds, color = effect)) +
+  stat_summary(fun.y = "mean", geom = "point") +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = effect)) +
+  facet_grid(training_s1 ~ .) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Log odds")
 ```
 ```{r Relative switch-stay plots, echo = F, fig.cap = "Probabilities relative to participants' baseline (= mean) stay probabilities."}
 
@@ -1143,19 +1151,18 @@ wilcox.test(rel_AIC$l1)
 ```{r Plot parameters by training and run, echo = F, warning = F, message = F, fig.width = 6, fig.height = 6}
 
 selected_parameter_dat = subset(ts_params_molten,
-                                params %in% c("hyb", "l0", "klaus_hier_4", "klaus_flat_4", "klaus_hier_6", "klaus_flat_6") & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"),
+                                params %in% c("hyb", "l0", "l1", "klaus_hier_4", "klaus_flat_4", "klaus_hier_6", "klaus_flat_6", "klaus_hier_7", "klaus_flat_7") & parameter %in% c("a1", "a2", "b1", "b2", "p", "k", "w"),
                                 select = c("SubjID", "run", "training", "training_s1", "parameter", "estimate", "params"))   # params == "l1"
 
-gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
+ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
   stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
   # geom_line(alpha = .2, aes(group = SubjID)) +
   labs(x = "", y = "Parameter w") +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_grid(training_s1 ~ params) +
   theme(legend.position = "none")
-gg_w_s1
 
-selected_parameter_dat = subset(selected_parameter_dat, params == "l0")
+selected_parameter_dat = subset(selected_parameter_dat, params == selected_model)
 
 gg_params_s1 =
   ggplot(subset(selected_parameter_dat, run != "Run 4"), aes(parameter, estimate, color = parameter != "w")) +
@@ -1170,22 +1177,20 @@ gg_params_s1
 gg_params = gg_params_s1 +
   facet_grid(training ~ run)
 
+gg_w_s1 = ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange") +
+  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "line", aes(group = training_s1)) +
+  labs(x = "", y = "Parameter w") +
+  coord_cartesian(ylim = c(0, 1)) +
+  facet_grid(training_s1 ~ .) +
+  theme(legend.position = "none")
+gg_w_s1
+
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
   ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
   ggsave(file.path(figure_dir, "gg_w_s1.png"), gg_w_s1, width = 2, height = 4)
 }
-
-gg_w_s1 +
-  geom_point(position = "jitter",alpha = .2)
-
-ggplot(subset(selected_parameter_dat, run != "Run 4" & parameter == "w"), aes(run, estimate)) +
-  stat_summary(fun.data = "mean_cl_normal", fun.args = list(mult = 1), geom = "pointrange", position = position_dodge(width = .9)) +
-  # geom_line(alpha = .2, aes(group = SubjID)) +
-  labs(x = "", y = "Parameter w") +
-  # coord_cartesian(ylim = c(0, 1)) +
-  facet_grid( ~ training_s1) +
-  theme(legend.position = "none")
 ```
 ```{r Regression model w ~ run * training, echo = F}
 
@@ -1196,7 +1201,9 @@ mod_dat$parameter = factor(mod_dat$parameter)
 contrasts(mod_dat$run) = contr.poly(3)
 mf_vs_rest = c(1, 1, -2)
 co_vs_mb = c(-1, 1, 0)
-contrasts(mod_dat$training_s1) = cbind(mf_vs_rest, mb_vs_mf)
+c_vs_train = c(-2, 1, 1)
+mb_vs_mf = c(0, -1, 1)
+contrasts(mod_dat$training_s1) = cbind(mf_vs_rest, co_vs_mb)
 
 params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
      data = mod_dat,
@@ -1205,8 +1212,12 @@ params_mod = lmer(estimate ~ training_s1 * run + (1 | SubjID),
 summary(params_mod)
 Anova(params_mod, type = 3)
 
-### Should run another model on the changes!
-# dw12 ~ training_s1
+# Post-hoc t.tests
+mod_dat_long = reshape(mod_dat, timevar = "run", idvar = c("SubjID", "training", "training_s1"), direction = "wide")
+mod_dat_long$dw12 = with(mod_dat_long, `estimate.Run 2` - `estimate.Run 1`)
+t.test(subset(mod_dat_long, training_s1 == "co")$dw12)
+t.test(subset(mod_dat_long, training_s1 == "mb")$dw12)
+t.test(subset(mod_dat_long, training_s1 == "mf")$dw12)
 ```
 ```{r Calculate parameter changes from run 1 to runs 2 and 3, echo = F, warning = F, fig.cap = "Changes in parameter estimates over training"}
 
@@ -1257,7 +1268,7 @@ summary(diff_dat)
 
 plot_dat = subset(diff_dat, runs %in% c(12, 13))
 gg_param_changes_s1 = ggplot(plot_dat, aes(parameter, estimate, color = parameter != "w")) +
-  stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +   # SE instead of cl!
+  stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
   geom_point(alpha = .2, position = "jitter") +
   theme(legend.position = "none") +
   labs(x = "", y = "Change in parameters between runs") +
@@ -1266,6 +1277,10 @@ gg_param_changes_s1
 
 gg_param_changes = gg_param_changes_s1 +
   facet_grid(training ~ runs)
+
+# ggplot(subset(diff_dat, parameter == "w"), aes(runs, estimate)) +
+#   stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
+#   facet_grid(training_s1 ~ .)
 
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_param_changes_s1.png"), gg_param_changes_s1, width = 5, height = 5)
@@ -1276,7 +1291,7 @@ if (ggsave_figures) {
 ## Stats (w ~ training * run)
 plot_dat$runs = factor(plot_dat$runs)
 contrasts(plot_dat$runs) = c(-1, 1)
-contrasts(plot_dat$training_s1) = cbind(c_vs_train, mb_vs_mf)
+contrasts(plot_dat$training_s1) = cbind(mf_vs_rest, co_vs_mb)   # cbind(c_vs_train, mb_vs_mf)
 
 params_rel_mod = lmer(estimate ~ training_s1 * runs + (1 | SubjID),
                       data = subset(plot_dat, parameter == "w"),
@@ -1289,7 +1304,7 @@ Anova(params_rel_mod, type = 3)
 
 ```{r Training performance and MB, echo = F}
 # Prepare data
-ts_plot_dat = subset(ts_params, params %in% c("l0", "klaus_hier_4", "klaus_flat_4"),
+ts_plot_dat = subset(ts_params, params %in% c("hyb", "l0", "l1", "klaus_hier_4", "klaus_flat_4"),
                      select = -c(NLL, BIC, AIC, num_par, a1, a2, b1, b2, l, p, k, n_trials))
 ts_plot_dat1 = subset(ts_plot_dat, run == "Run 1")
 ts_plot_dat2 = subset(ts_plot_dat, run == "Run 2")
@@ -1311,12 +1326,18 @@ ts_plot_dat = merge(ts_plot_dat, subset(ts_plot_dat_wide, select = c("SubjID", "
 ts_plot_dat = subset(ts_plot_dat, run %in% paste("Run", 1:2))
 
 # Overall
-ggplot(ts_plot_dat, aes(training_s1, dw12)) +
+ggplot(subset(ts_plot_dat), aes(training_s1, dw12)) +
+  stat_summary(geom = "bar", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
+  # geom_point(alpha = .2, position = "jitter") +
+  stat_summary(geom = "pointrange", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
+  facet_grid(~ params)
+
+ggplot(subset(ts_plot_dat, params == selected_model), aes(training_s1, dw12)) +
   stat_summary(geom = "bar", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
   # geom_point(alpha = .2, position = "jitter") +
   stat_summary(geom = "pointrange", fun.data = mean_cl_normal, fun.args = list(mult = 1))
 
-ggplot(ts_plot_dat, aes(training_s1, dw13)) +
+ggplot(subset(ts_plot_dat, params == selected_model), aes(training_s1, dw13)) +
   stat_summary(geom = "bar", fun.data = mean_cl_normal, fun.args = list(mult = 1)) +
   # geom_point(alpha = .2, position = "jitter") +
   stat_summary(geom = "pointrange", fun.data = mean_cl_normal, fun.args = list(mult = 1))
