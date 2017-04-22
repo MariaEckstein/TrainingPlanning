@@ -1,13 +1,13 @@
 function genrec_plots(Data, genrec)
 
-%% Put dataframes together
-genrec_all = [];
-for fileID = 1:4
-    load(['genrec_real_agents_hyb_sim' num2str(fileID) '.mat'])
-    genrec_all = [genrec_all; genrec];
-end
-genrec = genrec_all;
-save('genrec_real_agents_hyb_sim.mat', 'genrec')
+% %% Put dataframes together
+% genrec_all = [];
+% for fileID = 1:4
+%     load(['genrec_real_agents_hyb_sim' num2str(fileID) '.mat'])
+%     genrec_all = [genrec_all; genrec];
+% end
+% genrec = genrec_all;
+% save('genrec_real_agents_hyb_sim.mat', 'genrec')
 
 %% Get Agent data and genrec columns names
 genrec_columns;
@@ -71,3 +71,66 @@ title('Q2 (mf)')
 subplot(2, 3, 6)
 plot(Agent(:,Qmb2_c))
 title('Q2 (mb)')
+
+%% Compare Klaus' and my models
+%%% Plot values over time
+figure
+subplot(3, 2, 1)
+plot(1:length(V), V(:,1:2))
+subplot(3, 2, 2)
+plot(1:length(V), V(:,3:6))
+subplot(3, 2, 3)
+plot(1:length(M), M(:,1:2))
+subplot(3, 2, 5)
+plot(1:length(Q), Q(:,1:2))
+
+%%% Plot action probabilities
+figure
+subplot(1, 2, 1)
+plot(1:length(P), P(:,1:2))
+subplot(1, 2, 2)
+plot(1:length(P), P(:,3:6))
+
+%%% Compare fitted parameters between models
+% load('genrec_real_agents_a1b1_l0_nok_sim_21-Apr-2017_23.mat')
+% load('genrec_real_agents_hyb_sim_22-Apr-2017_3.29.mat')
+% load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_3.42.mat')
+load('genrec_real_agents_hyb_sim_22-Apr-2017_4.5.mat')
+load('pars4.mat')
+% load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_0.mat')
+% load('pars2.mat')
+genrec_dat1 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
+pars1 = pars(1:size(genrec_dat1, 1), :);   % remove empty rows
+genrec_cols = [rec_aabblwpk_c(2) rec_aabblwpk_c(4)...  % alpha, beta, p, w
+    rec_aabblwpk_c(7) rec_aabblwpk_c(6)];
+
+figure
+for pl = 1:4
+    subplot(2, 2, pl)
+    scatter(pars1(:,pl), genrec_dat1(:, genrec_cols(pl)))  % alpha, beta, p, w
+    lsline
+end
+
+%%% Compare fitted parameters within models
+% load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_9.mat')
+% load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_3.36.mat')
+load('genrec_real_agents_hyb_sim_22-Apr-2017_4.11.mat')
+load('pars3.mat')
+genrec_dat2 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
+try genrec_dat1 = genrec_dat1(1:size(genrec_dat2, 1), :);   % make genrec_dat1 the same length as genrec_dat2
+catch genrec_dat2 = genrec_dat2(1:size(genrec_dat1, 1), :);   % make genrec_dat2 the same length as genrec_dat1
+end
+pars2 = pars(pars(:, 3) ~= 0, :);   % remove empty rows
+try pars1 = pars1(1:size(pars2, 1), :);   % make pars1 the same length as pars2
+catch pars2 = pars2(1:size(pars1, 1), :);   % make pars2 the same length as pars1
+end
+
+figure
+for pl = 1:4
+    subplot(2, 4, pl)
+    scatter(pars1(:,pl), pars2(:,pl))
+    lsline    
+    subplot(2, 4, pl + 4)
+    scatter(genrec_dat1(:,genrec_cols(pl)), genrec_dat2(:,genrec_cols(pl)))
+    lsline
+end

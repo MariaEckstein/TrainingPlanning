@@ -1,5 +1,11 @@
 function result = computeNLL(Agent, par, n_fit, output, common, data_type, a1b1)
 
+Agent = params.user.log;
+par = [.1 .1 .01 .01 1 .5 .5 .5];
+% Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
+Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
+data_type = 'real';
+
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
 n_params = length(par);
@@ -22,11 +28,14 @@ Qmf2 = [.5 .5 .5 .5];
 %%% Data: Participant behavior (= sequence of choices)
 if strcmp(data_type, 'real')
     real_data_columns;
+    Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
 else
     data_columns;   % Find out which columns contain what
 end
 [n_trials, ~] = size(Agent);   % number of trials
 LL = 0;   % initialize log likelihood
+
+% Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
 
 key1 = 123;
 key2 = 123;
@@ -37,18 +46,12 @@ frac2 = 123;
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
-%     fractals1 = [1, 2];
     fractals1 = Agent(t, frac1_p);   % Which fractal is on the left, which is on the right?
     prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qb - Qa))
     frac1 = Agent(t, frac1_c);
     key1 = Agent(t, key1_c);
 
     % Stage 2: Calculate likelihood of chosen actions
-%     if any(Agent(t, frac2_c) == [1, 2])
-%         fractals2 = [1, 2];
-%     else
-%         fractals2 = [3, 4];
-%     end
     fractals2 = Agent(t, frac2_p);
     prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);
     frac2 = Agent(t, frac2_c);
@@ -65,16 +68,22 @@ for t = 1:n_trials
     [Qmb1, Qmb2] = MB_update(Qmf2, common);
 
     % Combine model-free and model-based
-    Q1 = (1 - w) * Qmf1 + w * Qmb1;   % CHECK IF USUALLY COMBINED HERE OR AT PROBABILITIES!
+    Q1 = (1 - w) * Qmf1 + w * Qmb1;
     Q2 = Qmf2;
 
     % Get log of likelihoods of both choices and sum up
-    if any(frac2 == [1 3])
-        f2_index = 1;
-    else
-        f2_index = 2;
+    LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));
+
+    % Store values in table (just for plotting)
+    V(t,1:2) = Qmf1;
+    V(t,3:6) = Qmf2;
+    M(t,1:2) = Qmb1;
+    Q(t,1:2) = Q1;    
+    P(t,fractals1) = prob_frac1;
+    if t > 1
+        P(t,3:6) = P(t-1,3:6);
     end
-    LL = LL + log(prob_frac2(f2_index)) + log(prob_frac1(frac1));
+    P(t,(fractals2+2)) = prob_frac2;
 
 end
 

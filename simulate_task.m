@@ -35,8 +35,12 @@ for agent = 1:n_agents
     beta2 = par(4) * 100;
     lambda = par(5);
     w = par(6);
-    p_par = par(7) * 100 - 50;
-    k_par = par(8) * 100 - 50;
+    p_par = par(7) * 10 - 5;
+    k_par = par(8) * 10 - 5;
+
+    % Name the keys (1 = left; 2 = right)
+    keys1 = [1 2];
+    keys2 = [1 2 1 2];   % repeat, so that all 4 2nd-stage fractals can be accessed
 
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
     key1 = 123;
@@ -49,21 +53,24 @@ for agent = 1:n_agents
         a_t = a + t - 1;   % row for each trial in this agent's Data
 
         %%% Stage 1
-        fractals1 = [1, 2];
-        keys1 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
+%         fractals1 = [1, 2];
+%         keys1 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
+        fractals1 = randsample([1 2], 2, false);   % randomly determine which fractal will be presented where
         % Agent picks one of the two fractals
         prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** ((beta * (Qb - Qa) + k * (kbonb - keybona) + p * (pbonb = pbona)))
         frac1 = choice(fractals1, prob_frac1);   % pick one action, according to probs
-        key1 = keys1(frac1);   % record which key corresponds to the selected fractal
+%         key1 = keys1(frac1);   % record which key corresponds to the selected fractal
+        key1 = keys1(fractals1 == frac1);   % record which key corresponds to the selected fractal
 
         %%% Stage 2
         fractals2 = select_stage2_fractals(frac1, common);
-        keys2 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
-        keys2 = [keys2 keys2];   % repeat, so that frac2==3 works like frac2==1 and frac2==4 works like frac2==2
+%         keys2 = randsample([1 2], 2, false);   % randomly determine which key is associated with each fractal
+%         keys2 = [keys2 keys2];   % repeat, so that frac2==3 works like frac2==1 and frac2==4 works like frac2==2
         % Agent picks one of the two fractals
         prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qa - Qb))
         frac2 = choice(fractals2, prob_frac2);   % pick one action, according to probs
-        key2 = keys2(frac2);   % record which key corresponds to the selected fractal
+%         key2 = keys2(frac2);   % record which key corresponds to the selected fractal
+        key2 = keys2(fractals2 == frac2);   % record which key corresponds to the selected fractal
 
         % Agent receives reward
         reward = rand < fractal_rewards(frac2, t);
