@@ -1,10 +1,8 @@
-function result = computeNLL(Agent, par, n_fit, output, common, data_type, a1b1)
+function result = computeNLL(Agent, par, n_fit, output, common, data_type)
 
-Agent = params.user.log;
-par = [.1 .1 .01 .01 1 .5 .5 .5];
-% Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
-Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
-data_type = 'real';
+% Agent = params.user.log;
+% par = [.1 .1 .01 .01 1 .5 .5 .5];
+% data_type = 'real';
 
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
@@ -29,13 +27,17 @@ Qmf2 = [.5 .5 .5 .5];
 if strcmp(data_type, 'real')
     real_data_columns;
     Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
+    Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
 else
     data_columns;   % Find out which columns contain what
 end
 [n_trials, ~] = size(Agent);   % number of trials
 LL = 0;   % initialize log likelihood
 
-% Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
+P = 0.5 * ones(n_trials,6);
+V = zeros(n_trials,6);
+M = zeros(n_trials,2);
+Q = zeros(n_trials,2);
 
 key1 = 123;
 key2 = 123;
