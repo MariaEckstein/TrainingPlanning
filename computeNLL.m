@@ -7,21 +7,7 @@ function result = computeNLL(Agent, par, n_fit, output, common, data_type)
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
 n_params = length(par);
-alpha1 = par(1);
-alpha2 = par(2);
-beta1 = par(3) * 100;
-beta2 = par(4) * 100;
-lambda = par(5);
-w = par(6);
-p_par = par(7) * 10 - 5;
-k_par = par(8) * 10 - 5;
-
-%%% Initial fractal values
-epsilon = .00001;
-Q1 = [.5 .5];   % initial values 2st-stage fractals
-Qmf1 = [.5 .5];
-Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
-Qmf2 = [.5 .5 .5 .5];
+initialize_par;
 
 %%% Data: Participant behavior (= sequence of choices)
 if strcmp(data_type, 'real')
@@ -38,11 +24,6 @@ P = 0.5 * ones(n_trials,6);
 V = zeros(n_trials,6);
 M = zeros(n_trials,2);
 Q = zeros(n_trials,2);
-
-key1 = 123;
-key2 = 123;
-frac1 = 123;
-frac2 = 123;
 
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials

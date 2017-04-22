@@ -3,14 +3,14 @@
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 data_year = '2016';
 sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = 'hyb';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+sim_model = 'a1b1_l0_nok';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
+fit_model = 'a1b1_l0_nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 
 %%% Additional stuff 
 common = 0.7;   % Probability of the common transition
 n_agents = 100;   % Number of simulated agents
 n_trials = 201;   % Number of simulated trials
-n_fmincon_iterations = 5;   % Number of iteractions when fitting parameters
+n_fmincon_iterations = 3;   % Number of iteractions when fitting parameters
 genrec_file_name = name_genrec_file(sim_model, fit_model);
 model_parameters = define_model_parameters;  % Which parameters are fitted (-1) versus fixed (values) in each model?
 if strcmp(location, 'home')
