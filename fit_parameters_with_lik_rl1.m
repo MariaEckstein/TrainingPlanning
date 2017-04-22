@@ -4,6 +4,7 @@ file_index = find(~[files.isdir]);
 number = length(file_index);
 real_data_columns;   % Find out which columns contain what
 pars = zeros(number, 4);
+pars_filename = 'pars_bugfix2.mat';
 
 for i_dataset = 1:number
     file_name = files(file_index(i_dataset)).name;
@@ -19,8 +20,8 @@ for i_dataset = 1:number
     [lik,X] = lik_rl1(Agent, fit_params);
     pars(i_dataset,:) = X.par;
     if mod(i_dataset, 5) == 1
-        save('pars_bugfix.mat', 'pars')
+        save(pars_filename, 'pars')
         i_dataset
     end
 end
-save('pars_bugfix.mat', 'pars')
+save(pars_filename, 'pars')

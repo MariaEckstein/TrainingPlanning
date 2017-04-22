@@ -4,7 +4,7 @@ location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 data_year = '2016';
 data_type = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
 sim_model = 'real';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'a1b1_l0_nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 
 %%% Additional stuff 
 common = 0.7;   % Probability of the common transition
