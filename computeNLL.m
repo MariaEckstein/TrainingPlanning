@@ -6,43 +6,24 @@ function result = computeNLL(Agent, par, n_fit, output, common, data_type)
 
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
-n_params = length(par);
-alpha1 = par(1);
-alpha2 = par(2);
-beta1 = par(3) * 100;
-beta2 = par(4) * 100;
-lambda = par(5);
-w = par(6);
-p_par = par(7) * 10 - 5;
-k_par = par(8) * 10 - 5;
-
-%%% Initial fractal values
-epsilon = .00001;
-Q1 = [.5 .5];   % initial values 2st-stage fractals
-Qmf1 = [.5 .5];
-Q2 = [.5 .5 .5 .5];   % initial values 2nd-stage fractals
-Qmf2 = [.5 .5 .5 .5];
+initialize_par;
 
 %%% Data: Participant behavior (= sequence of choices)
 if strcmp(data_type, 'real')
     real_data_columns;
     Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
-    Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
+    Agent(:,frac2_c) = Agent(:,frac2_c) - 2;   % stage-2 fractals are numbered 3-6 in the real data, but need to be 1-4 for my analysis
 else
     data_columns;   % Find out which columns contain what
 end
 [n_trials, ~] = size(Agent);   % number of trials
 LL = 0;   % initialize log likelihood
 
-P = 0.5 * ones(n_trials,6);
-V = zeros(n_trials,6);
-M = zeros(n_trials,2);
-Q = zeros(n_trials,2);
-
-key1 = 123;
-key2 = 123;
-frac1 = 123;
-frac2 = 123;
+% % Just for plotting
+% P = 0.5 * ones(n_trials,6);
+% V = zeros(n_trials,6);
+% M = zeros(n_trials,2);
+% Q = zeros(n_trials,2);
 
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
@@ -76,16 +57,16 @@ for t = 1:n_trials
     % Get log of likelihoods of both choices and sum up
     LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));
 
-    % Store values in table (just for plotting)
-    V(t,1:2) = Qmf1;
-    V(t,3:6) = Qmf2;
-    M(t,1:2) = Qmb1;
-    Q(t,1:2) = Q1;    
-    P(t,fractals1) = prob_frac1;
-    if t > 1
-        P(t,3:6) = P(t-1,3:6);
-    end
-    P(t,(fractals2+2)) = prob_frac2;
+%     % Store values in table (just for plotting)
+%     V(t,1:2) = Qmf1;
+%     V(t,3:6) = Qmf2;
+%     M(t,1:2) = Qmb1;
+%     Q(t,1:2) = Q1;    
+%     P(t,fractals1) = prob_frac1;
+%     if t > 1
+%         P(t,3:6) = P(t-1,3:6);
+%     end
+%     P(t,(fractals2+2)) = prob_frac2;
 
 end
 

@@ -1,4 +1,4 @@
-function [pmin, pmax, par0, n_fit, n_params] = get_fmincon_stuff(fit_par)
+function [pmin, pmax, par0] = get_fmincon_stuff(fit_par)
 
 pmin = fit_par;   % lower bound for fitting parameters
 pmin(fit_par == -1) = 0;
@@ -11,5 +11,3 @@ for p = [7 8]
     end
 end
 par0 = ones(1, length(pmin)) .* (pmin + (pmax - pmin) / 2);   % initial start values for fitting
-n_fit = sum(fit_par == -1);   % number of parameters that are fitted (for BIC & AIC)
-n_params = length(fit_par);   % number of parameters

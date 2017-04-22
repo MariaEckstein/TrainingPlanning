@@ -3,8 +3,6 @@ function prob_frac = softmax_Q2p(fractals, Q, beta, key, frac, k_par, p_par, eps
 
 %% Key repetition bonus
 % Which fractal should get a bonus because it's at the side of the last key press?
-% keyrep_bon = fractals == key;   % Fractal at last-trial key gets a bonus
-
 if key == 1
     keyrep_bon = [1 0];   % Left key -> left fractal
 elseif key == 2
@@ -18,7 +16,6 @@ end
 fracrep_bon = fractals == frac;  % if fractals = [2 1] and frac = 2 -> [1 0]; etc.
 
 %% Calculate softmax to transform Q-values (&stuff) into decision probabilities
-% prob_frac_left = 1 / (1 + exp( beta * (Q(fractals(2)) - Q(fractals(1)))));
 prob_frac_left = 1 / (1 + exp( ...
     beta * (Q(fractals(2)) - Q(fractals(1))) + ...   % value right fractal - value left fractal
     k_par * (keyrep_bon(2) - keyrep_bon(1)) + ...   % key_bon right - key_bon left

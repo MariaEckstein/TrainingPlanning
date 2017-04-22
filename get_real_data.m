@@ -1,14 +1,10 @@
-function [Agent, agentID, runID] = get_real_data(file_dir, fileName)
+function [Agent, agentID, runID] = get_real_data(file_dir, file_name)
 
 real_data_columns;   % Find out which columns contain what
-load([file_dir '/' fileName]);
-Agent = params.user.log;
-Agent(:, frac2_c) = Agent(:, frac2_c) - 2;   % stage-2 fractals are numbered 3-6 in the real data, but need to be 1-4 for my analysis
-complete_data_rows = ~isnan(Agent(:, key1_c)) & ~isnan(Agent(:, key2_c)) & Agent(:, frac2_c) > 0;
-Agent = Agent(complete_data_rows,:);
-agentID =  fileName(length(fileName)-9:length(fileName)-7);
+load_and_preprocess_data;
+agentID =  file_name(length(file_name)-9:length(file_name)-7);
 agentID = str2double(agentID);
-runID = fileName(length(fileName)-4);
+runID = file_name(length(file_name)-4);
 switch runID
     case 'A'
         runID = 1;

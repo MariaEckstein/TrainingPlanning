@@ -2,15 +2,15 @@
 %% Switches for this script (would be function argument if this were a function)
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 data_year = '2016';
-sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = 'hyb';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+data_type = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+sim_model = 'real';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
+fit_model = 'a1b1_l0_nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 
 %%% Additional stuff 
 common = 0.7;   % Probability of the common transition
 n_agents = 100;   % Number of simulated agents
 n_trials = 201;   % Number of simulated trials
-n_fmincon_iterations = 5;   % Number of iteractions when fitting parameters
+n_fmincon_iterations = 30;   % Number of iteractions when fitting parameters
 genrec_file_name = name_genrec_file(sim_model, fit_model);
 model_parameters = define_model_parameters;  % Which parameters are fitted (-1) versus fixed (values) in each model?
 if strcmp(location, 'home')
@@ -21,7 +21,7 @@ else
 end
 
 %% Simulate / Load Data
-switch sim_data
+switch data_type
     case 'sim'
         
         sim_par = model_parameters(model_ID(sim_model),:);  % Which parameters will be fitted (-1) and which are fixed by me (values)?
@@ -40,7 +40,6 @@ switch sim_data
         n_agents = length(fileIndex);
 end
 
-
 %% Fit the parameters to the Data
 fit_par = model_parameters(model_ID(fit_model),:);  % Which parameters will be fitted (-1) and which are fixed by me (values)?
 n_fit = sum(fit_par == -1);   % number of parameters that are fitted (for BIC & AIC)
@@ -51,7 +50,7 @@ genrec_columns;
 for agent = 1:n_agents
 
     clear Agent  % Select data of one agent; save into Agent
-    if strcmp(sim_data, 'real')
+    if strcmp(data_type, 'real')
         fileName = files(fileIndex(agent)).name;
         [Agent, agentID, runID] = get_real_data(file_dir, fileName);
     else
@@ -63,13 +62,13 @@ for agent = 1:n_agents
     end
 
     %%% Minimize the function
-    fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data);   % minimize neg. log. lik. for data Agent, finding the right par; n_fit = number of parameters to be estimated; common = probability of common transition in the task (70% percent); sim_data = simulated or human data; fit_model = which model should be fitted ('mb', 'mf', 'hyb')
+    fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, data_type);   % minimize neg. log. lik. for data Agent, finding the right par; n_fit = number of parameters to be estimated; common = probability of common transition in the task (70% percent); sim_data = simulated or human data; fit_model = which model should be fitted ('mb', 'mf', 'hyb')
     [fit_params, ~] = minimize_NLL(fun, fit_par, n_fmincon_iterations);   % look at x-position and function value of found minimum
-    NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data);
+    NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, data_type);
 
     %%% Save generated (simulated) and recovered (fitted) values in genrec
     genrec(agent, [agentID_c run_c]) = [agentID runID];
-    if ~strcmp(sim_data, 'real')
+    if ~strcmp(data_type, 'real')
         genrec(agent, gen_aabblwpk_c) = Agent(1, par_c);
     end
     genrec(agent, rec_aabblwpk_c) = fit_params;   % Save fitted parameters (x) into the genrec rec paramater columns (aabblwpk)

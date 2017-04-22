@@ -5,6 +5,7 @@ alpha1 = 1; alpha2 = 2; beta1 = 3; beta2 = 4; lambda = 5; w_par = 6; p_par = 7; 
 
 %% Create model_parameters, a matrix that contains the initial parameter values for each model
 model_parameters = -1 * ones(30, 8);  % -1 means that this parameter will be fitted
+
 %%% Fill each row of model_parameters with one model
 % Models cut by one parameter
 model_parameters(model_ID('mf'), w_par) = 0;

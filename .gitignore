@@ -1,3 +1,10 @@
 .idea/
 old/
 matlab_workspace.mat
+GenrecsAndData/
+genrec*
+*.pdf
+*.asv
+KlausModelingResults*
+RLDM/
+*.mat
