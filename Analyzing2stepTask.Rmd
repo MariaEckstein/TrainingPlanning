@@ -1189,7 +1189,7 @@ gg_w_s1
 if (ggsave_figures) {
   ggsave(file.path(figure_dir, "gg_params_s1.png"), gg_params_s1, width = 6, height = 5)
   ggsave(file.path(figure_dir, "gg_params.png"), gg_params, width = 6, height = 5)
-  ggsave(file.path(figure_dir, "gg_w_s1.png"), gg_w_s1, width = 2, height = 4)
+  ggsave(file.path(figure_dir, "gg_w_s1.pdf"), gg_w_s1, width = 5, height = 2)
 }
 ```
 ```{r Regression model w ~ run * training, echo = F}

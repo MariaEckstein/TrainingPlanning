@@ -1,10 +1,10 @@
 
 %% ADJUST THESE THINGS BEFORE RUNNING
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
-data_year = 'Klaus';   % Can be '2015' (data collected in Munich) or '2016' (data collected in XLab)
-sim_data = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = nan;   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+data_year = '2016';   % Can be '2015' (data collected in Munich) or '2016' (data collected in XLab)
+sim_data = 'load';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+sim_model = 'hyb';   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
+fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b') - check in functions model_ID and define_model_parameters
 solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
 
 %% Prepare things
@@ -44,6 +44,7 @@ if fit_data
         % Find paramater values that minimize the negative log likelihood
         % of agent data, given the model selected in fit_model
         fit_params = parameterFitting.minimize_NLL(Agent, sim_data, common);
+        fit_params
         NLLBICAIC = parameterFitting.compute_NLL(Agent, fit_params, sim_data, common);
 
         % Save generated (simulated) and recovered (fitted) values in genrec
@@ -55,7 +56,7 @@ if fit_data
             i_dataset
         end
     end
-     
+    
     %%% Save final version of genrec after running the last agent
     genrec.save_data
 end
