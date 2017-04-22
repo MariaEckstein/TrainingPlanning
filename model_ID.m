@@ -29,4 +29,10 @@ switch model_name
         model_ID = 13;
     case 'a1b1_nok'
         model_ID = 14;
+    case 'a1b1_l0_nopk'
+        model_ID = 15;
+    case 'a1b1_l0_nok'
+        model_ID = 16;
+    case 'test'
+        model_ID = 17;
 end
