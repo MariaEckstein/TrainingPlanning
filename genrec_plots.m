@@ -102,6 +102,7 @@ plot(1:length(P), P(:,3:6))
 
 load('genrec_real_agents_hyb_sim_22-Apr-2017_4.5.mat')
 load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_5.49.mat')
+load('genrec_real_agents_hyb_sim_22-Apr-2017_6.29.mat')
 load('pars_bugfix.mat')
 genrec1 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
 pars1 = pars(pars(:, 3) ~= 0, :);   % remove empty rows
@@ -129,6 +130,7 @@ end
 
 load('genrec_real_agents_hyb_sim_22-Apr-2017_5.7.mat')
 load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_6.10.mat')
+load('genrec_real_agents_hyb_sim_22-Apr-2017_6.35.mat')
 load('pars3.mat')
 genrec2 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
 try genrec1 = genrec1(1:size(genrec2, 1), :);   % make genrec_dat1 the same length as genrec_dat2

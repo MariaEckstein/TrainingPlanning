@@ -3,8 +3,21 @@ files = dir(file_dir);
 file_index = find(~[files.isdir]);
 number = length(file_index);
 real_data_columns;   % Find out which columns contain what
-pars = zeros(number, 4);
-pars_filename = 'pars_bugfix2.mat';
+n_pars = 4;
+pars = zeros(number, n_pars);
+pars_filename = ['pars_' num2str(n_pars) '.mat'];
+par0 = zeros(1,n_pars);
+switch n_pars
+    case 7    %a1 a2  b1 b2 l  p w]
+        pmin = [0 0   0   0 0 -5 0];
+        pmax = [1 1 100 100 1  5 1];
+    case 6
+        pmin = [0 0   0   0   -5 0];
+        pmax = [1 1 100 100    5 1];
+    case 4
+        pmin = [0     0       -5 0];
+        pmax = [1   100        5 1];
+end
 
 for i_dataset = 1:number
     file_name = files(file_index(i_dataset)).name;
@@ -13,9 +26,9 @@ for i_dataset = 1:number
     object_fun = @(par)lik_rl1(Agent, par);
     options = optimoptions(@fmincon, 'Algorithm', 'sqp');   % options for search
     problem = createOptimProblem('fmincon', 'objective', object_fun, ...   % search problem
-    'x0', zeros(1,4), 'lb', [0 0 -5 0], 'ub', [1 100 5 1], 'options', options);
+    'x0', par0, 'lb', pmin, 'ub', pmax, 'options', options);
     ms = MultiStart('UseParallel', true);   % we want multiple starts to find a global minimum % 'UseParallel', true
-    [fit_params, function_value] = run(ms, problem, 30);   % look at x-position and function value of found minimum
+    [fit_params, function_value] = run(ms, problem, 5);   % look at x-position and function value of found minimum
     
     [lik,X] = lik_rl1(Agent, fit_params);
     pars(i_dataset,:) = X.par;
