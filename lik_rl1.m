@@ -21,6 +21,9 @@ function [lik, X] = lik_rl1(trial, par, parMS)
 % 14. 2nd phase, stimulus right
 % 15. common (0) or uncommon (1) transition
 
+par = [.1 .1 1 1 1 0 .5];  % model with lambda == 1
+% par = [.1 .1 1 1 0 0 .5];   % model with lambda == 0
+
 missed = zeros(length(trial),1);
 reward = trial(:,10);
 ch1 = trial(:,4); choice1 = zeros(length(ch1),2); for i=1:length(ch1), try, choice1(i,ch1(i)) = 1; catch, missed(i) = 1; end; end
@@ -73,13 +76,13 @@ end
 v2 = sum(V(1:length(reward),:).*choice2,2);
 for i=1:length(reward)
     delta1(i,1) = v2(i) - sum(V(i,1:2).*choice1(i,:));
-    V(i+1,1:2) = V(i,1:2) + alpha1 * repmat(delta1(i),1,2).*choice1(i,:);
+    V(i+1,1:2) = V(i,1:2) + alpha1 * repmat(delta1(i),1,2).*choice1(i,:) + alpha1*lambda * repmat(delta2(i),1,2).*choice1(i,:);
 end
 
 % elegibility traces
-for i=1:length(reward)
-    V(i+1,1:2) = V(i+1,1:2) + alpha1*lambda * repmat(delta2(i),1,2).*choice1(i,:);
-end
+% for i=1:length(reward)
+%     V(i+1,1:2) = V(i+1,1:2) + alpha1*lambda * repmat(delta2(i),1,2).*choice1(i,:);
+% end
 V(end,:) = [];
 
 

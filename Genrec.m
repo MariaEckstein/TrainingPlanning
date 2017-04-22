@@ -9,9 +9,9 @@ classdef Genrec < handle
     
     methods
         
-        function obj = Genrec(sim_model, fit_model, n_datasets, n_params)
+        function obj = Genrec(sim_model, fit_model, n_datasets)
             obj.file_name = name_genrec_file(sim_model, fit_model);
-            obj.Data = zeros(n_datasets, 2 * n_params + 7);
+            obj.Data = zeros(n_datasets, 23);
         end
         
         function add_results(self, i_dataset, Agent, agentID, runID, fit_params, NLLBICAIC, sim_data, n_fit)

@@ -2,14 +2,12 @@
 %% ADJUST THESE THINGS BEFORE RUNNING
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 data_year = '2016';   % Can be '2015' (data collected in Munich) or '2016' (data collected in XLab)
-sim_data = 'load';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = 'hyb';   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b') - check in functions model_ID and define_model_parameters
-solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
+sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+sim_model = 'a1b1_l0_nok';   % What model should be used for simulation / what data should be loaded? (e.g., 'mb', 'mf', 'hyb'; check in model_ID for all available models)
+fit_model = 'a1b1_l0_nok';   % What model should be used for fitting? ('mf', 'mb', 'hyb', 'a1b1') - check in functions model_ID and define_model_parameters
 
 %% Prepare things
 n_workers = 12;   % Number of workers when on cluster
-n_params = 8;
 common = 0.7;   % Probability of the common transition
 fit_data = true;   % Sould the data also be fitted? Or just simulated?
 if isnan(fit_model)
@@ -32,9 +30,9 @@ end
 if fit_data
     
     % Create a Genrec object, which will hold (true and) fitted parameters
-    genrec = Genrec(sim_data, fit_model, dataset.number, n_params);
+    genrec = Genrec(sim_data, fit_model, dataset.number);
     % Create a ParameterFitting object, which will take care of parameter fitting
-    parameterFitting = ParameterFitting(fit_model, n_fmincon_iterations, solver_algo);
+    parameterFitting = ParameterFitting(fit_model, n_fmincon_iterations);
     
     for i_dataset = 1:dataset.number
 

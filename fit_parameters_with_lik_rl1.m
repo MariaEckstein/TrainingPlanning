@@ -1,4 +1,3 @@
-
 file_dir = 'C:\Users\maria\MEGAsync\TrainingPlanningProject\TwoStepTask\Results\rawdata2016';
 files = dir(file_dir);
 file_index = find(~[files.isdir]);
@@ -24,8 +23,8 @@ for i_dataset = 1:number
     [lik,X] = lik_rl1(Agent, fit_params);
     pars(i_dataset,:) = X.par;
     if mod(i_dataset, 10) == 1
-        save('pars4.mat', 'pars')
+        save('pars_bugfix.mat', 'pars')
         i_dataset
     end
 end
-save('pars4.mat', 'pars')
+save('pars_bugfix.mat', 'pars')

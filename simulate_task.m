@@ -53,9 +53,16 @@ for agent = 1:n_agents
         % Model-free
         Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);
         Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);
+%         VPE = Qmf2(frac2) - Qmf1(frac1);   % value prediction error: difference between actual and predicted value of 2nd fractal
+%         RPE = reward - Qmf2(frac2);   % reward prediction error: difference between actual and predicted reward
+%         Qmf1(frac1) = Qmf1(frac1) + alpha1 * (VPE + lambda * RPE);   % 1st-stage RL value update, including eligibility trace
+%         Qmf2(frac2) = Qmf2(frac2) + alpha2 * RPE;   % 2nd-stage simple RL value update
 
         % Model-based
         Qmb1 = MB_update(Qmf2, common);
+%         Qmb1_frac1 = common * max(Qmf2(1:2)) + (1 - common) * max(Qmf2(3:4));
+%         Qmb1_frac2 = (1 - common) * max(Qmf2(1:2)) + common * max(Qmf2(3:4));
+%         Qmb1 = [Qmb1_frac1 Qmb1_frac2];
 
         % Combine model-free and model-based
         Q1 = (1 - w) * Qmf1 + w * Qmb1;

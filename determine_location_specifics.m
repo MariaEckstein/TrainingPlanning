@@ -7,4 +7,4 @@ else
     file_dir = ['datafiles/d', num2str(data_year)];   % Where the participant data is stored on the cluster
 end
 n_fmincon_iterations = 10;
-n_trials = 210;
+n_trials = 200;

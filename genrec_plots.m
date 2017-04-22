@@ -14,7 +14,7 @@ genrec_columns;
 data_columns;
 
 %% Plot all true and fitted values against each other
-genrec_dat = genrec.read_data;
+% genrec_dat = genrec.read_data;
 n_bins = 25;   % determine how fine-graned the histogram will be
 BIC = mean(genrec_dat(:,NLLBICAIC_c(2)))
 figure
@@ -103,7 +103,7 @@ subplot(1, 2, 2)
 plot(1:length(P), P(:,3:6))
 
 %%% Compare fitted parameters between models
-load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_9.mat')
+load('genrec_real_agents_a1b1_l0_nok_sim_21-Apr-2017_23.mat')
 load('pars4.mat')
 % load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_0.mat')
 % load('pars2.mat')
@@ -120,7 +120,7 @@ for pl = 1:4
 end
 
 %%% Compare fitted parameters within models
-load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_1.mat')
+load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_9.mat')
 load('pars3.mat')
 genrec_dat2 = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
 try genrec_dat1 = genrec_dat1(1:size(genrec_dat2, 1), :);   % make genrec_dat1 the same length as genrec_dat2
