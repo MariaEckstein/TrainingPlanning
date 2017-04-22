@@ -4,14 +4,14 @@
 % where fract2 == -2; remove strokes with the same key more than x times)
 
 %% Switches for this script (would be function argument if this were a function)
-sim_data = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-sim_model = 'real';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+sim_model = 'nopk';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
+fit_model = 'nopk';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 solver_algo = 'fmincon';   % Which method is used to solve? 'fmincon' (with n_fmincon_iterations different starts) or 'ga' (parallelization doesn't work) or 'particleswarm' (leads to worse results)?
 
 %%% Additional stuff 
-data_version = '_kp';   % What simulations should be loaded? Can be '' (6 parameters) or '_new' (8 parameters)
+data_version = '';   % What simulations should be loaded? Can be '' (6 parameters) or '_new' (8 parameters)
 % If you want to run the script on the old data (6 parameters only), you
 % also need to change n_params, or whatever leads to it!
 common = 0.7;   % Probability of the common transition

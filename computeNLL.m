@@ -9,16 +9,8 @@ beta1 = par(3) * 100;
 beta2 = par(4) * 100;
 lambda = par(5);
 w = par(6);
-p_par = par(7) * 100 - 50;
-k_par = par(8) * 100 - 50;
-% p_par = par(7) * 2 - 1;
-% p_par = beta2 * p_par;
-% k_par = par(8) * 2 - 1;
-% k_par = beta2 * k_par;
-if length(a1b1) >= 4
-    if strcmp(a1b1(1:4), '1a1b')
-    end
-end
+p_par = par(7) * 10 - 5;
+k_par = par(8) * 10 - 5;
 
 %%% Initial fractal values
 epsilon = .00001;
@@ -45,17 +37,19 @@ frac2 = 123;
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
-    fractals1 = [1, 2];
+%     fractals1 = [1, 2];
+    fractals1 = Agent(t, frac1_p);   % Which fractal is on the left, which is on the right?
     prob_frac1 = softmax_Q2p(fractals1, Q1, beta1, key1, frac1, k_par, p_par, epsilon);   % 1 / (1 + e ** (beta * (Qb - Qa))
     frac1 = Agent(t, frac1_c);
     key1 = Agent(t, key1_c);
 
     % Stage 2: Calculate likelihood of chosen actions
-    if any(Agent(t, frac2_c) == [1, 2])
-        fractals2 = [1, 2];
-    else
-        fractals2 = [3, 4];
-    end
+%     if any(Agent(t, frac2_c) == [1, 2])
+%         fractals2 = [1, 2];
+%     else
+%         fractals2 = [3, 4];
+%     end
+    fractals2 = Agent(t, frac2_p);
     prob_frac2 = softmax_Q2p(fractals2, Q2, beta2, key2, frac2, k_par, p_par, epsilon);
     frac2 = Agent(t, frac2_c);
     key2 = Agent(t, key2_c);

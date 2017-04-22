@@ -37,10 +37,6 @@ for agent = 1:n_agents
     w = par(6);
     p_par = par(7) * 100 - 50;
     k_par = par(8) * 100 - 50;
-%     p_par = par(7) * 2 - 1;
-%     p_par = beta2 * p_par;
-%     k_par = par(8) * 2 - 1;
-%     k_par = beta2 * k_par;
 
     % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
     key1 = 123;
@@ -92,6 +88,7 @@ for agent = 1:n_agents
         % Actions & reward
         Data(a_t, [frac1_c frac2_c]) = [frac1 frac2];
         Data(a_t, [key1_c key2_c]) = [key1 key2];
+        Data(a_t, [frac1_p frac2_p]) = [fractals1 fractals2];
         Data(a_t, reward_c) = reward;
         % Parameters
         Data(a_t, par_c) = par;
