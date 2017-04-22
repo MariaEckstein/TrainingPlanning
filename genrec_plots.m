@@ -14,6 +14,7 @@ genrec_columns;
 data_columns;
 
 %% Plot all true and fitted values against each other
+genrec_dat = genrec.read_data;
 n_bins = 25;   % determine how fine-graned the histogram will be
 BIC = mean(genrec_dat(:,NLLBICAIC_c(2)))
 figure
@@ -29,20 +30,20 @@ histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
 title(['av.BIC=' num2str(round(BIC))])
 
 %% Plot results of fitting models to humans
-genrec_dat = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
-genrec_dat = sortrows(genrec_dat, [agentID_c run_c]);   % sort by agentID and runID
-[n_agents, ~] = size(genrec_dat);
-BIC = mean(genrec_dat(:,NLLBICAIC_c(2)))   % get average BIC per agent
+genrec_dat1 = genrec_dat1(genrec_dat1(:, 1) ~= 0, :);   % remove empty rows
+genrec_dat1 = sortrows(genrec_dat1, [agentID_c run_c]);   % sort by agentID and runID
+[n_agents, ~] = size(genrec_dat1);
+BIC = mean(genrec_dat1(:,NLLBICAIC_c(2)))   % get average BIC per agent
 n_bins = 15;   % determine how fine-graned the histogram will be
 figure
 for i = 1:8   % plot parameters
     subplot(3, 3, i)
-    histogram(genrec_dat(:, rec_aabblwpk_c(i)), n_bins)
+    histogram(genrec_dat1(:, rec_aabblwpk_c(i)), n_bins)
     xlim([0 1])
     ylim([0 n_agents])
 end
 subplot(3, 3, 9)   % add BIC
-histogram(genrec_dat(:,NLLBICAIC_c(2)), n_bins)
+histogram(genrec_dat1(:,NLLBICAIC_c(2)), n_bins)
 ylim([0 n_agents])
 title(['av.BIC=' num2str(round(BIC))])
 
@@ -81,3 +82,62 @@ title('Q2 (mf)')
 subplot(2, 3, 6)
 plot(Agent(:,Qmb2_c))
 title('Q2 (mb)')
+
+%% Compare Klaus' and my models
+%%% Plot values over time
+figure
+subplot(3, 2, 1)
+plot(1:length(V), V(:,1:2))
+subplot(3, 2, 2)
+plot(1:length(V), V(:,3:6))
+subplot(3, 2, 3)
+plot(1:length(M), M(:,1:2))
+subplot(3, 2, 5)
+plot(1:length(Q), Q(:,1:2))
+
+%%% Plot action probabilities
+figure
+subplot(1, 2, 1)
+plot(1:length(P), P(:,1:2))
+subplot(1, 2, 2)
+plot(1:length(P), P(:,3:6))
+
+%%% Compare fitted parameters between models
+load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_9.mat')
+load('pars4.mat')
+% load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_0.mat')
+% load('pars2.mat')
+genrec_dat1 = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
+pars1 = pars(1:size(genrec_dat1, 1), :);   % remove empty rows
+genrec_cols = [rec_aabblwpk_c(2) rec_aabblwpk_c(4)...  % alpha, beta, p, w
+    rec_aabblwpk_c(7) rec_aabblwpk_c(6)];
+
+figure
+for pl = 1:4
+    subplot(2, 2, pl)
+    scatter(pars1(:,pl), genrec_dat1(:, genrec_cols(pl)))  % alpha, beta, p, w
+    lsline
+end
+
+%%% Compare fitted parameters within models
+load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_1.mat')
+load('pars3.mat')
+genrec_dat2 = genrec_dat(genrec_dat(:, 1) ~= 0, :);   % remove empty rows
+try genrec_dat1 = genrec_dat1(1:size(genrec_dat2, 1), :);   % make genrec_dat1 the same length as genrec_dat2
+catch genrec_dat2 = genrec_dat2(1:size(genrec_dat1, 1), :);   % make genrec_dat2 the same length as genrec_dat1
+end
+pars2 = pars(pars(:, 3) ~= 0, :);   % remove empty rows
+try pars1 = pars1(1:size(pars2, 1), :);   % make pars1 the same length as pars2
+catch pars2 = pars2(1:size(pars1, 1), :);   % make pars2 the same length as pars1
+end
+
+figure
+for pl = 1:4
+    subplot(2, 4, pl)
+    scatter(pars1(:,pl), pars2(:,pl))
+    lsline    
+    subplot(2, 4, pl + 4)
+    scatter(genrec_dat1(:,genrec_cols(pl)), genrec_dat2(:,genrec_cols(pl)))
+    lsline
+end
+
