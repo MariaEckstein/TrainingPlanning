@@ -9,10 +9,6 @@ fit_model = 'a1b1_l0_nok';   % What model should be used for fitting? ('mf', 'mb
 %% Prepare things
 n_workers = 12;   % Number of workers when on cluster
 common = 0.7;   % Probability of the common transition
-fit_data = true;   % Sould the data also be fitted? Or just simulated?
-if isnan(fit_model)
-    fit_data = false;
-end
 [n_fmincon_iterations, n_trials, file_dir] = determine_location_specifics(location, n_workers, data_year);
 
 %% Simulate / Load Data
@@ -27,7 +23,7 @@ switch sim_data
 end
 
 %% Fit parameters to the Data (if fit_data is true)
-if fit_data
+if ~isnan(fit_model)
     
     % Create a Genrec object, which will hold (true and) fitted parameters
     genrec = Genrec(sim_data, fit_model, dataset.number);
