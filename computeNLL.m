@@ -12,6 +12,10 @@ end
 [n_trials, ~] = size(Agent);   % number of trials
 LL = 0;   % initialize log likelihood
 
+P = 0.5 * ones(n_trials,6);
+V = zeros(n_trials,6);
+M = zeros(n_trials,2);
+Q = zeros(n_trials,2);
 
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
@@ -28,22 +32,38 @@ for t = 1:n_trials
     frac2 = Agent(t, frac2_c);   % Name of fractal chosen (1 2 3 or 4)
     key2 = Agent(t, key2_c);   % Key used to choose fractal (1 = left; 2 = right)
 
+    % Get log of likelihoods of both choices and sum up
+    LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));    
+
     % Check outcome of trial and update values for next trial
     reward = Agent(t, reward_c);   % 1 = reward; 0 = no reward
 
     % Model-free
-    Qmf1 = MF_update_Q1(frac1, Qmf1, reward, alpha1, lambda, Qmf2, frac2);   % [Value frac1; value frac2] Model-free values of first-stage fractals
-    Qmf2 = MF_update_Q2(frac2, Qmf2, reward, alpha2);   % [Value frac1; value frac2; value frac3; value frac4]
+    VPE = Qmf2(frac2) - Qmf1(frac1);   % value prediction error: difference between actual and predicted value of 2nd fractal
+    RPE = reward - Qmf2(frac2);   % reward prediction error: difference between actual and predicted reward
+    Qmf1(frac1) = Qmf1(frac1) + alpha1 * (VPE + lambda * RPE);   % 1st-stage RL value update, including eligibility trace
+    Qmf2(frac2) = Qmf2(frac2) + alpha2 * RPE;   % 2nd-stage simple RL value update
 
     % Model-based
-    Qmb1 = MB_update(Qmf2, common);
+    Qmb1_frac1 = common * max(Qmf2(1:2)) + (1 - common) * max(Qmf2(3:4));
+    Qmb1_frac2 = (1 - common) * max(Qmf2(1:2)) + common * max(Qmf2(3:4));
+    Qmb1 = [Qmb1_frac1 Qmb1_frac2];
 
     % Combine model-free and model-based
     Q1 = (1 - w) * Qmf1 + w * Qmb1;
     Q2 = Qmf2;
-
-    % Get log of likelihoods of both choices and sum up
-    LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));
+    
+    % Store values in table
+    V(t,1:2) = Qmf1;
+    V(t,3:6) = Qmf2;
+    M(t,1:2) = [Qmb1_frac1, Qmb1_frac2];
+    Q(t,1:2) = Q1;
+    
+    P(t,fractals1) = prob_frac1;
+    if t > 1
+        P(t,3:6) = P(t-1,3:6);
+    end
+    P(t,(fractals2+2)) = prob_frac2;
 
 end
 
