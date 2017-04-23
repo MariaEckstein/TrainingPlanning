@@ -96,10 +96,12 @@ plot(1:length(P), P(:,3:6))
 % load('genrec_real_agents_hyb_sim_22-Apr-2017_3.29.mat')
 % load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_3.42.mat')
 % load('genrec_real_agents_hyb_sim_22-Apr-2017_4.5.mat')
-load('genrec_real_agents_hyb_sim_22-Apr-2017_5.7.mat')
-load('pars4.mat')
+% load('genrec_real_agents_hyb_sim_22-Apr-2017_5.7.mat')
+% load('genrec_real_agents_hyb_sim_22-Apr-2017_16.43.mat')
 % load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_0.mat')
 % load('pars2.mat')
+load('genrec_a1b1_l0_nok_agents_a1b1_l0_nok_sim_22-Apr-2017_16.55.mat')
+load('pars4.mat')
 genrec_dat1 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
 pars1 = pars(1:size(genrec_dat1, 1), :);   % remove empty rows
 genrec_cols = [rec_aabblwpk_c(2) rec_aabblwpk_c(4)...  % alpha, beta, p, w
@@ -115,7 +117,8 @@ end
 %%% Compare fitted parameters within models
 % load('genrec_real_agents_a1b1_l0_nok_sim_20-Apr-2017_9.mat')
 % load('genrec_real_agents_a1b1_l0_nok_sim_22-Apr-2017_3.36.mat')
-load('genrec_real_agents_hyb_sim_22-Apr-2017_4.11.mat')
+% load('genrec_real_agents_hyb_sim_22-Apr-2017_4.11.mat')
+load('genrec_a1b1_l0_nok_agents_a1b1_l0_nok_sim_22-Apr-2017_16.49.mat')
 load('pars3.mat')
 genrec_dat2 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
 try genrec_dat1 = genrec_dat1(1:size(genrec_dat2, 1), :);   % make genrec_dat1 the same length as genrec_dat2
