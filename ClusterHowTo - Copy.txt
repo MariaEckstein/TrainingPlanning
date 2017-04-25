@@ -22,7 +22,7 @@ USE AN .SH SCRIPT TO RUN A FILE
 - Type "chmod +x ./runMAIN.sh" inside this folder to make the script executable
 - type "./runMAIN.sh" (when in the same directory; otherwise "$HOME/runMAIN.sh") to run runMAIN
 
-RUN A MATLAB SCRIPT IN PARALLEL
+RUN A MATLAB SCRIPT IN PARALLEL USING PARPOOL
 - On my own laptop / in my script:
   - Make sure I have the Matlab Parallel computing toolbox installed
   - Run "parpool(n_workers)" once (n_workers=2 on my old laptop); or start parallel processing by clicking on the lower left corner
@@ -35,6 +35,9 @@ RUN A MATLAB SCRIPT IN PARALLEL
   - Run runMAIN.sh from the command line: "qsub -pe threaded n_workers ./runMAIN.sh"
     - n_workers should be <= 8 to have a chance of being done
 	- Instead of ./runMAIN.sh, I can also specify the full path, e.g., $HOME/runMAIN.sh
+
+RUN SCRIPTS IN PARALLEL USING SGE
+- 
 
 MONITOR A PARALLEL PROCESS
 - Check how much different clusters are working: "ssh nxX", where X is the number of the cluster (1-13)

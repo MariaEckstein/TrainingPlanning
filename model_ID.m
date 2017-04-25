@@ -32,7 +32,7 @@ switch model_name
     case 'a1b1_l0_nopk'
         model_ID = 15;
     case 'a1b1_l0_nok'
-        model_ID = 16;
+        model_ID = 16;        
     case 'test'
-        model_ID = 17;
+        model_ID = 18;
 end

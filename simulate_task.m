@@ -1,12 +1,5 @@
 function Data = simulate_task(n_agents, n_trials, par, fractal_rewards, common)
 
-%     n_agents = 5;
-%     n_trials = 5;
-%     par = [0.1, 0.4, 0.3, 0.3, 0.4, 0.5, 0.7, 0.2];
-%     load('list1.mat');
-%     fractal_rewards = x(5:8,:);
-%     common = 0.7;
-
 %% Initialize dataframe that will hold all agents' behavior
 Data = zeros(n_agents * n_trials, 25);
 n_params = length(par);

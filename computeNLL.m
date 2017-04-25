@@ -18,12 +18,13 @@ else
     data_columns;   % Find out which columns contain what
 end
 [n_trials, ~] = size(Agent);   % number of trials
-LL = 0;   % initialize log likelihood
+% LL = 0;   % initialize log likelihood
 
 P = 0.5 * ones(n_trials,6);
 V = zeros(n_trials,6);
 M = zeros(n_trials,2);
 Q = zeros(n_trials,2);
+LL = zeros(n_trials,2);
 
 %%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
@@ -55,13 +56,13 @@ for t = 1:n_trials
     Q2 = Qmf2;
 
     % Get log of likelihoods of both choices and sum up
-    LL = LL + log(prob_frac2(key2)) + log(prob_frac1(key1));
+    LL(t,:) = [log(prob_frac1(key1)) log(prob_frac2(key2))];
 
     % Store values in table (just for plotting)
     V(t,1:2) = Qmf1;
     V(t,3:6) = Qmf2;
     M(t,1:2) = Qmb1;
-    Q(t,1:2) = Q1;    
+    Q(t,1:2) = Q1;
     P(t,fractals1) = prob_frac1;
     if t > 1
         P(t,3:6) = P(t-1,3:6);
@@ -71,7 +72,7 @@ for t = 1:n_trials
 end
 
 % Take negative of LL to get negative log likelihood; calculate BIC and AIC
-NLL = -LL;
+NLL = -sum(sum(LL));
 BIC = 2 * NLL + n_fit * log(2 * n_trials);
 AIC = 2 * NLL + 2 * n_fit;
 

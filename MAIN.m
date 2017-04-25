@@ -2,22 +2,22 @@
 %% Switches for this script (would be function argument if this were a function)
 location = 'home';   % Where is this code run? Can be 'home' or 'cluster'
 data_year = '2016';
-sim_data = 'sim';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
-data_type = 'hyb';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
-fit_model = 'hyb';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b' (Also needs changes in computeNLL!!))
+sim_data = 'real';   % Should the data be simulated ('sim') or loaded from disk ('load') or is the real dataset used ('real')?
+data_type = 'real';   % What model should be used for simulation / what data should be loaded? ('mb', 'mf', 'hyb')
+fit_model = 'nok_l0';   % What model should be used for fitting? ('mf', 'mb', 'hyb', '1a1b')
 
 %%% Additional stuff 
 common = 0.7;   % Probability of the common transition
 n_agents = 100;   % Number of simulated agents
 n_trials = 201;   % Number of simulated trials
-n_fmincon_iterations = 3;   % Number of iteractions when fitting parameters
+n_fmincon_iterations = 10;   % Number of iteractions when fitting parameters
 genrec_file_name = name_genrec_file(data_type, fit_model);
 model_parameters = define_model_parameters;  % Which parameters are fitted (-1) versus fixed (values) in each model?
 if strcmp(location, 'home')
     file_dir = ['C:\Users\maria\MEGAsync\TrainingPlanningProject\TwoStepTask\Results\rawdata' data_year];   % Where is the original data stored? 
 else
-    parpool(12);
-    file_dir = 'datafiles/test';   % equal portions of the files are in folders g1-g4
+    %parpool(12);
+    file_dir = ['datafiles/d' data_year];   % equal portions of the files are in folders g1-g4
 end
 
 %% Simulate / Load Data
@@ -51,8 +51,8 @@ for agent = 1:n_agents
 
     clear Agent  % Select data of one agent; save into Agent
     if strcmp(sim_data, 'real')
-        fileName = files(fileIndex(agent)).name;
-        [Agent, agentID, runID] = get_real_data(file_dir, fileName);
+        file_name = files(fileIndex(agent)).name;
+        [Agent, agentID, runID] = get_real_data(fullfile(file_dir, file_name));
     else
         data_columns;   % Find out which columns contain what
         agent_rows = Data(:, AgentID_c) == agent;

@@ -1,14 +1,10 @@
-function [Agent, agentID, runID] = get_real_data(file_dir, fileName)
+function [Agent, agentID, runID] = get_real_data(full_file_path)
 
-real_data_columns;   % Find out which columns contain what
-load([file_dir '/' fileName]);
-Agent = params.user.log;
-complete_data_rows = ~isnan(Agent(:, key1_c)) & ~isnan(Agent(:, key2_c)) & Agent(:, frac2_c) > 0;
-remove_first_20 = [zeros(20,1); ones(length(Agent)-20,1)];
-Agent = Agent(complete_data_rows & remove_first_20,:);
-agentID =  fileName(length(fileName)-9:length(fileName)-7);
+load_and_preprocess_data;
+[file_dir, file_name] = fileparts(full_file_path);
+agentID = file_name(length(file_name)-5:length(file_name)-3);
 agentID = str2double(agentID);
-runID = fileName(length(fileName)-4);
+runID = file_name(length(file_name));
 switch runID
     case 'A'
         runID = 1;
