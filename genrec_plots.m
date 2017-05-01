@@ -100,29 +100,27 @@ plot(1:size(LL,1), LL)   % maria
 
 %%% Compare fitted parameters between models
 % 4-parameter models
-load('pars_a1b1_l0_noka.mat')
+load('genrec_real_agents_a1b1_l0_nok_sim_24-Apr-2017_1.47.mat')
 load('pars_45.mat')
-genrec4 = genrec;   % remove empty rows
-pars4 = pars;   % remove empty rows
+load('all_pars_41')
+genrec4 = genrec;
 % 6-parameter models
-load('pars_nok_l0a.mat')
+load('genrec_real_agents_nok_l0_sim_24-Apr-2017_1.12.mat')
 load('pars_65.mat')
-genrec6 = genrec;   % remove empty rows
-pars6 = pars;   % remove empty rows
+genrec6 = genrec;
+pars6 = pars;
 % 7-parameter models
-load('pars_noka.mat')
+load('genrec_real_agents_nok_sim_24-Apr-2017_1.46.mat')
 load('pars_75.mat')
-genrec7 = genrec;   % remove empty rows
-pars7 = pars;   % remove empty rows
+genrec7 = genrec;
+pars7 = pars;
 
-% genrec7 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
-% pars7 = pars(pars(:, 3) ~= 0, :);   % remove empty rows
-% try pars1 = pars1(1:size(genrec1, 1), :);   % make genrec_dat1 the same length as genrec_dat2
-% catch genrec1 = genrec1(1:size(pars1, 1), :);   % make genrec_dat2 the same length as genrec_dat1
-% end
-% try pars1 = pars1(1:size(genrec1, 1), :);   % make pars1 the same length as pars2
-% catch genrec1 = genrec1(1:size(pars1, 1), :);   % make pars2 the same length as pars1
-% end
+genrec4 = genrec4(genrec4(:, 1) ~= 0, :);   % remove empty rows
+genrec6 = genrec6(genrec6(:, 1) ~= 0, :);   % remove empty rows
+genrec7 = genrec7(genrec7(:, 1) ~= 0, :);   % remove empty rows
+all_pars_41 = all_pars_41(1:size(genrec4, 1), :);   % make genrec_dat1 the same length as genrec_dat2
+% all_pars_61 = all_pars_61(1:size(genrec6, 1), :);   % make genrec_dat1 the same length as genrec_dat2
+% all_pars_71 = all_pars_71(1:size(genrec7, 1), :);   % make genrec_dat1 the same length as genrec_dat2
 
 genrec_cols4 = [rec_aabblwpk_c(2) rec_aabblwpk_c(4)...
     rec_aabblwpk_c(7) rec_aabblwpk_c(6)];  % alpha, beta, p, w
@@ -133,7 +131,7 @@ genrec_cols7 = [rec_aabblwpk_c(1:5) rec_aabblwpk_c([7 6])];  % a1, a2, b1, b2, l
 figure
 for pl = 1:4
     subplot(2, 2, pl)
-    scatter(pars4(:,pl), genrec4(:, genrec_cols4(pl)))  % alpha, beta, p, w
+    scatter(all_pars_41(:, genrec_cols4(pl)), genrec4(:, genrec_cols4(pl)))  % alpha, beta, p, w
     lsline
 end
 
@@ -189,13 +187,15 @@ end
 
 %%% Compare fitted parameters within models
 % 4-parameter models
-load('pars_a1b1_l0_nokb.mat')
+load('genrec_real_agents_a1b1_l0_nok_sim_24-Apr-2017_1.48.mat')
 load('pars_46.mat')
+load('all_pars_42.mat')
 % 6-parameter models
-load('pars_nok_l0b.mat')
+load('genrec_real_agents_nok_l0_sim_24-Apr-2017_1.45.mat')
 load('pars_66.mat')
+load('all_pars_61.mat')
 % 7-parameter models
-load('pars_nokb.mat')
+load('genrec_real_agents_nok_sim_24-Apr-2017_1.47.mat')
 load('pars_76.mat')
 
 genrec2 = genrec(genrec(:, 1) ~= 0, :);   % remove empty rows
@@ -209,10 +209,18 @@ end
 
 figure
 for pl = 1:size(pars4, 2)
-    subplot(2, size(pars4, 2), pl)
-    scatter(pars4(:,pl), pars2(:,pl))
-    lsline    
+    subplot(2, 4, pl)
+    scatter(all_pars_41(:,genrec_cols4(pl)), all_pars_42(:,genrec_cols4(pl)))
+    lsline
     subplot(2, size(pars4, 2), pl + size(pars4, 2))
     scatter(genrec4(:,genrec_cols4(pl)), genrec2(:,genrec_cols4(pl)))
+    lsline
+end
+
+% Running Klaus' model on cluster leads to same results 
+figure
+for pl = 1:4
+    subplot(2, 2, pl)
+    scatter(all_pars_41(:,genrec_cols4(pl)), pars(:,pl))
     lsline
 end
