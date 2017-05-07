@@ -1,20 +1,10 @@
 function genrec_plots(Data, genrec)
 
-% %% Put dataframes together
-% genrec_all = [];
-% for fileID = 1:4
-%     load(['genrec_real_agents_hyb_sim' num2str(fileID) '.mat'])
-%     genrec_all = [genrec_all; genrec];
-% end
-% genrec = genrec_all;
-% save('genrec_real_agents_hyb_sim.mat', 'genrec')
-
 %% Get Agent data and genrec columns names
 genrec_columns;
 data_columns;
 
 %% Plot all true and fitted values against each other
-% genrec=genrec(1:91,:)
 n_bins = 25;   % determine how fine-graned the histogram will be
 BIC = mean(genrec(:,NLLBICAIC_c(2)))
 figure
@@ -99,39 +89,18 @@ subplot(2, 1, 2)
 plot(1:size(LL,1), LL)   % maria
 
 %%% Compare fitted parameters between models
-% 4-parameter models
-load('genrec_real_agents_a1b1_l0_nok_sim_24-Apr-2017_1.47.mat')
-load('pars_45.mat')
-load('all_pars_41')
-genrec4 = genrec;
-% 6-parameter models
-load('genrec_real_agents_nok_l0_sim_24-Apr-2017_1.12.mat')
-load('pars_65.mat')
-genrec6 = genrec;
-pars6 = pars;
-% 7-parameter models
-load('genrec_real_agents_nok_sim_24-Apr-2017_1.46.mat')
-load('pars_75.mat')
-genrec7 = genrec;
-pars7 = pars;
-
-genrec4 = genrec4(genrec4(:, 1) ~= 0, :);   % remove empty rows
-genrec6 = genrec6(genrec6(:, 1) ~= 0, :);   % remove empty rows
-genrec7 = genrec7(genrec7(:, 1) ~= 0, :);   % remove empty rows
-all_pars_41 = all_pars_41(1:size(genrec4, 1), :);   % make genrec_dat1 the same length as genrec_dat2
-% all_pars_61 = all_pars_61(1:size(genrec6, 1), :);   % make genrec_dat1 the same length as genrec_dat2
-% all_pars_71 = all_pars_71(1:size(genrec7, 1), :);   % make genrec_dat1 the same length as genrec_dat2
-
-genrec_cols4 = [rec_aabblwpk_c(2) rec_aabblwpk_c(4)...
-    rec_aabblwpk_c(7) rec_aabblwpk_c(6)];  % alpha, beta, p, w
-genrec_cols6 = [rec_aabblwpk_c(1:4) rec_aabblwpk_c([7 6])];  % a1, a2, b1, b2, p, w
-genrec_cols7 = [rec_aabblwpk_c(1:5) rec_aabblwpk_c([7 6])];  % a1, a2, b1, b2, l, p, w
+load('all_pars.mat')
+v1_pars = all_pars(all_pars(:,3) == 1,:);
+v2_pars = all_pars(all_pars(:,3) == 2,:);
 
 % Compare Klaus' and Maria's 4-parameter models
+n4_K = v1_pars(v1_pars(:,4) == 7 & v1_pars(:,2) == 103,:);
+n4_M = v1_pars(v1_pars(:,4) == 7 & v1_pars(:,2) == 112,:);
+n4_M = n4_M(1:425,:);
 figure
-for pl = 1:4
-    subplot(2, 2, pl)
-    scatter(all_pars_41(:, genrec_cols4(pl)), genrec4(:, genrec_cols4(pl)))  % alpha, beta, p, w
+for pl = 1:8
+    subplot(3, 3, pl)
+    scatter(n4_K(:, rec_aabblwpk_c(pl)), n4_M(:, rec_aabblwpk_c(pl)))  % alpha, beta, p, w
     lsline
 end
 
@@ -193,7 +162,7 @@ load('all_pars_42.mat')
 % 6-parameter models
 load('genrec_real_agents_nok_l0_sim_24-Apr-2017_1.45.mat')
 load('pars_66.mat')
-load('all_pars_61.mat')
+load('all_pars_62.mat')
 % 7-parameter models
 load('genrec_real_agents_nok_sim_24-Apr-2017_1.47.mat')
 load('pars_76.mat')
@@ -223,4 +192,52 @@ for pl = 1:4
     subplot(2, 2, pl)
     scatter(all_pars_41(:,genrec_cols4(pl)), pars(:,pl))
     lsline
+end
+
+%% Get means and sd's for parameters of all of Klaus' models
+for n_par = [4 6 7]
+    K1_pars = all_pars(...
+        all_pars(:,2) == 112 & ...  % Klaus' model
+        all_pars(:,3) == 1 & ...    % Iteration 1
+        all_pars(:,4) == n_par, ... % 4, 6, or 7-parameter model
+        rec_aabblwpk_c);            % only the parameter columns
+%     K1_pars = K1_pars(1:5,:);   % for debugging
+    switch n_par
+        case 4
+            par = K1_pars(:,[2 4 7 6]);   % a, b, p, w
+            par_n = -log(1./par - 1);   % a, w
+            par_n(:,2) = log(par(:,2));   % b: inverse function to convert pars into -inf..inf space
+            par_n(:,3) = log(par(:,3)+5);   % p: inverse function to convert pars into -inf..inf space
+            par_n4 = par_n;
+        case 6
+            par = K1_pars(:,[1:4 7 6]);   % a1, a2, b1, b2, p, w
+            par_n = -log(1./par - 1);
+            par_n(:,[3 4]) = log(par(:,[3 4]));
+            par_n(:,5) = log(par(:,5)+5);
+            par_n6 = par_n;
+        case 7
+            par = K1_pars(:,[1:5 7 6]);   % a1, a2, b1, b2, l, p, w
+            par_n = -log(1./par - 1);
+            par_n(:,[3 4]) = log(par(:,[3 4]));
+            par_n(:,6) = log(par(:,6)+5);
+            par_n7 = par_n;
+    end
+end
+
+for i_par = 1:4
+    finite_par = isfinite(par_n4(:,i_par));
+    mean_4pars(i_par) = mean(par_n4(finite_par,i_par));
+    sd_4pars(i_par) = std(par_n4(finite_par,i_par));
+end
+
+for i_par = 1:6
+    finite_par = isfinite(par_n6(:,i_par));
+    mean_6pars(i_par) = mean(par_n6(finite_par,i_par));
+    sd_6pars(i_par) = std(par_n6(finite_par,i_par));
+end
+
+for i_par = 1:7
+    finite_par = isfinite(par_n7(:,i_par));
+    mean_7pars(i_par) = mean(par_n7(finite_par,i_par));
+    sd_7pars(i_par) = std(par_n7(finite_par,i_par));
 end

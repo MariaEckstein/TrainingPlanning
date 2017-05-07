@@ -2,7 +2,6 @@ function fit_parameters_with_computeNLL1(full_file_path, n_fit)
 
 %% Load participant file
 [file_dir, file_name] = fileparts(full_file_path);
-genrec_columns; 
 load_and_preprocess_data;
 common = 0.7;
 sim_data = 'real';
@@ -23,11 +22,17 @@ fit_par = model_parameters(model_ID(fit_model),:);  % Which parameters will be f
 fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data); 
 [fit_params, ~] = minimize_NLL(fun, fit_par, 2)   % Set fmincon_iterations HERE
 NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data);
+agentID = str2double(file_name(4:6));
+runID = file_name(9);
 
 %%% Save generated (simulated) and recovered (fitted) values in genrec
+genrec_columns;
+genrec = zeros(1, 22);
 genrec(1, rec_aabblwpk_c) = fit_params;   % Save fitted parameters (x) into the genrec rec paramater columns (aabblwpk)
 genrec(1, NLLBICAIC_c) = NLLBICAIC;   % Save NLL,a BIC, and AIC (NLLBICAIC) into the genrec NLLBICAIC columns (NLLBICAIC_c)
+genrec(1, [2 4]) = [112 n_fit];  % model n_fit
+genrec(1, [agentID_c run_c]) = [agentID runID]
 
 %% Save resulting parameters
-genrec_filename = ['Results/' file_name '_' num2str(n_fit) '_genrec1.mat']
+genrec_filename = ['Results/' file_name '_' num2str(n_fit) 'M_genrec.mat']
 save(genrec_filename, 'genrec')

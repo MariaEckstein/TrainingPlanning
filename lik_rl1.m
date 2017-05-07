@@ -81,11 +81,6 @@ for i=1:length(reward)
     delta1(i,1) = v2(i) - sum(V(i,1:2).*choice1(i,:));
     V(i+1,1:2) = V(i,1:2) + alpha1 * repmat(delta1(i),1,2).*choice1(i,:) + alpha1*lambda * repmat(delta2(i),1,2).*choice1(i,:);
 end
-
-% elegibility traces
-% for i=1:length(reward)
-%     V(i+1,1:2) = V(i+1,1:2) + alpha1*lambda * repmat(delta2(i),1,2).*choice1(i,:);
-% end
 V(end,:) = [];
 
 
@@ -137,17 +132,21 @@ LL_k = [nansum(log(prob(:,1:2)), 2) nansum(log(prob(:,3:6)), 2)];  % just for pl
 X.V= V; X.Q=Q; X.M=M; X.P = P; 
 X.L = prob;
 X.BIC = -2*sum(nansum(log(prob),2)) + length(par)*(log(2*length(trial))-log(2*pi)); 
-X.AIC = -2*sum(nansum(log(prob),2)) + 2*length(par); 
+X.AIC = -2*sum(nansum(log(prob),2)) + 2*length(par);
+X.NLL = lik;
 
 % calculate group data if nargin > 2
-
+par(par == 0) = par(par == 0) + 0.0000001;
 par_n = -log(1./par - 1);
 if length(par) == 4
-    par_n(2:3) = log(par(2:3)); % inverse function to convert pars into -inf..inf space
-elseif length(par) == 7
-    par_n([3 4 6]) = log(par([3 4 6])); % inverse function to convert pars into -inf..inf space
+    par_n(2) = log(par(2)); % inverse function to convert pars into -inf..inf space
+    par_n(3) = log(par(3)+5); % p: inverse function to convert pars into -inf..inf space
 elseif length(par) == 6
-    par_n([3 4 5]) = log(par([3 4 5]));
+    par_n([3 4]) = log(par([3 4]));
+    par_n(5) = log(par(5)+5);  % p
+elseif length(par) == 7
+    par_n([3 4]) = log(par([3 4])); % inverse function to convert pars into -inf..inf space
+    par_n(6) = log(par(6)+5); % p: inverse function to convert pars into -inf..inf space
 else
     error('numpar wrong');
 end

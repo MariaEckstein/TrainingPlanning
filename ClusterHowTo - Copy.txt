@@ -37,7 +37,12 @@ RUN A MATLAB SCRIPT IN PARALLEL USING PARPOOL
 	- Instead of ./runMAIN.sh, I can also specify the full path, e.g., $HOME/runMAIN.sh
 
 RUN SCRIPTS IN PARALLEL USING SGE
-- 
+- Create an .sh script that loops over all files in directory:
+  DATADIR="/home/bunge/maria/Desktop/TrainingPlanning/datafiles/d2016"
+  DATASET="${SGE_TASK}"
+  cd /home/bunge/maria/Desktop/TrainingPlanning && matlab -nodesktop -nosplash -r "fit_parameters_with_computeNLL('datafiles/d2016/$DATASET', 4)"
+- Execute this .sh script on the cluster, using "submit"
+  - Type in terminal: "submit -s ./rK72.sh -d ./datafiles/d2016"
 
 MONITOR A PARALLEL PROCESS
 - Check how much different clusters are working: "ssh nxX", where X is the number of the cluster (1-13)

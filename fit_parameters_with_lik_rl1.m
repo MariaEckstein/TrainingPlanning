@@ -31,7 +31,7 @@ for i_dataset = 1:number
     ms = MultiStart('UseParallel', true);   % we want multiple starts to find a global minimum % 'UseParallel', true
     [fit_params, function_value] = run(ms, problem, 10);   % look at x-position and function value of found minimum
     
-    [lik,X] = lik_rl1(Agent, fit_params);
+    [lik,X] = lik_rl1(Agent, fit_params);    
     pars(i_dataset,:) = X.par;
     if mod(i_dataset, 10) == 1
         save(pars_filename, 'pars')
