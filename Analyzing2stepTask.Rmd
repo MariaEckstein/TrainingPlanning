@@ -242,6 +242,7 @@ ts$reward = factor(ts$reward, levels = c("1", "0"), labels = c("Reward", "No rew
 ts$reward_prev_trial = factor(ts$reward_prev_trial, levels = c("1", "0"), labels = c("Reward", "No reward"))
 ts$transi_prev_trial = factor(ts$transi_prev_trial, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
 ts$uncommon_trans = factor(ts$uncommon_trans, levels = c("0", "1"), labels = c("Common transition", "Uncommon transition"))
+write.csv(ts, "ts.csv", row.names = F)
 ```
 ```{r How much data is there before and after cleaning, echo = F, warning = F}
 writeLines("Number of participants in each condition:\n")
@@ -841,27 +842,30 @@ gg_manipcheck
 
 if (preprocess_data) {
   # Read in all parameter estiamtes
-  all_pars = as.data.frame(readMat(file.path(model_dir, "all_pars.mat"))$all.pars)
-  all_pars = subset(all_pars, select = -c(5:9, 18))
-  colnames(all_pars) = c("SubjID", "model", "iteration", "n_par", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "run", "NLL", "BIC", "AIC")
-  all_pars$model = factor(all_pars$model, levels = c(103, 112), labels = c("M", "K"))
-  write.csv(all_pars, file.path(model_dir, "all_pars.csv"), row.names = F)
+  all_genrec = as.data.frame(readMat(file.path(model_dir, "all_genrec.mat"))$all.genrec)
+  all_genrec = subset(all_genrec, select = -c(5:9, 18))
+  colnames(all_genrec) = c("SubjID", "model", "hier", "n_par", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "run", "NLL", "BIC", "AIC")
+  all_genrec$model = factor(all_genrec$model, levels = c(112, 103), labels = c("M", "K"))
+  all_genrec$run[all_genrec$model == "M"] = all_genrec$run[all_genrec$model == "M"] - 64  # fix (old) bug
+  all_genrec$run = paste("Run", all_genrec$run)
+  write.csv(all_genrec, file.path(model_dir, "all_genrec.csv"), row.names = F)
 }
-all_pars$iteration = factor(all_pars$iteration)
+all_genrec$hier = factor(all_genrec$hier)
+M = subset(all_genrec, model == "M")
 
-a2_dat = subset(all_pars, select = c("SubjID", "run", "model", "iteration", "n_par", "a2"))
-a2_dat = reshape(a2_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "iteration", "n_par"))
+a2_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2"))
+a2_dat = reshape(a2_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
 
-p_dat = subset(all_pars, select = c("SubjID", "run", "model", "iteration", "n_par", "p"))
-p_dat = reshape(p_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "iteration", "n_par"))
+p_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "p"))
+p_dat = reshape(p_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
 
-w_dat = subset(all_pars, select = c("SubjID", "run", "model", "iteration", "n_par", "w"))
-w_dat = reshape(w_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "iteration", "n_par"))
+w_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w"))
+w_dat = reshape(w_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
 
 wide_dat = merge(a2_dat, p_dat)
 wide_dat = merge(wide_dat, w_dat)
 
-ggplot(wide_dat, aes(a2.M, a2.K, color = iteration)) +
+ggplot(wide_dat, aes(a2.M, a2.K, color = hier)) +
   geom_point(alpha = .2) +
   labs(x = "alpha Maria", y = "alpha Klaus") +
   facet_grid(~ n_par)
@@ -876,28 +880,79 @@ ggplot(wide_dat, aes(w.M, w.K)) +
   labs(x = "w Maria", y = "w Klaus") +
   facet_grid(~ n_par)
 
-it_dat = subset(all_pars, select = c("SubjID", "run", "model", "iteration", "n_par", "a2"))
-it_dat = reshape(it_dat, timevar = "iteration", direction = "wide", idvar = c("SubjID", "run", "model", "n_par"))
+hier_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2"))
+hier_dat = reshape(hier_dat, timevar = "hier", direction = "wide", idvar = c("SubjID", "run", "model", "n_par"))
 
-ggplot(it_dat, aes(a2.1, a2.2, color = model)) +
+ggplot(hier_dat, aes(a2.1, a2.0, color = model)) +
   geom_point() +
-  labs(x = "Iteration 1", y = "Iteration 2") +
-  facet_grid(~ n_par)
+  labs(x = "hier", y = "flat") +
+  facet_grid(run ~ n_par)
 
-it_dat = subset(all_pars, select = c("SubjID", "run", "model", "iteration", "n_par", "w"))
-it_dat = reshape(it_dat, timevar = "iteration", direction = "wide", idvar = c("SubjID", "run", "model", "n_par"))
-
-ggplot(it_dat, aes(w.1, w.2, color = model)) +
+ggplot(all_genrec, aes(SubjID, a2, color = hier)) +
   geom_point() +
-  labs(x = "Iteration 1", y = "Iteration 2") +
+  facet_grid(run ~ n_par)
+
+hier_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w"))
+hier_dat = reshape(hier_dat, timevar = "hier", direction = "wide", idvar = c("SubjID", "run", "model", "n_par"))
+
+ggplot(hier_dat, aes(w.1, w.0, color = model)) +
+  geom_point() +
+  labs(x = "hier", y = "flat") +
   facet_grid(~ n_par)
+```
+
+```{r Look at BICs to find the best model}
+
+all_genrec$n_par = factor(all_genrec$n_par)
+
+ggplot(subset(all_genrec), aes(model, BIC, fill = n_par)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "bar", position = "dodge") +
+  stat_summary(fun.data = mean_cl_normal, geom = "pointrange", position = position_dodge(width = .9)) +
+  geom_point(alpha = .1, position = position_dodge(width = .9)) +
+  facet_grid(~ hier)
+
+K = reshape(subset(all_genrec, hier == 0 & model == "K", select = c("SubjID", "n_par", "run", "BIC", "model")),
+            idvar = c("SubjID", "run", "model"), timevar = "n_par", direction = "wide")
+M = reshape(subset(all_genrec, hier == 0 & model == "M", select = c("SubjID", "n_par", "run", "BIC", "model")),
+            idvar = c("SubjID", "run", "model"), timevar = "n_par", direction = "wide")
+rel_BIC = rbind(K, M)
+rel_BIC$r4 = with(rel_BIC, BIC.7 - BIC.4)
+rel_BIC$r6 = with(rel_BIC, BIC.7 - BIC.6)
+rel_BIC_molten = melt(subset(rel_BIC, select = c("SubjID", "run", "model", "r4", "r6")),
+                      id.vars = c("SubjID", "run", "model"))
+
+ggplot(subset(rel_BIC_molten), aes(variable, value, color = model)) +
+  geom_point(position = "jitter", alpha = 0.2) +
+  stat_summary(fun.data = "mean_cl_normal", geom = "pointrange") +
+  facet_wrap(~ run) +
+  labs(x = "Model", y = "full model BIC minus this model BIC", color = "Model")
 
 ```
-```{r Look at BICs to find the best model}
+```{r exclude bad participants}
+ts = read.csv("ts.csv")
+bad_perf = read.csv("C:/Users/maria/MEGAsync/TrainingPlanningProject/allResults/XlabData2016/bad_perf.csv")
+all_genrec = add_group_columns(all_genrec)
+all_genrec = merge(all_genrec, bad_perf, all.x = T)
+if (do_exclude_trials) {
+  
+  # Exclude the same subjects that have been excluded from behavioral analyses
+  included_subj = ddply(ts, .(SubjID, run), summarize, n_trials = length(trial))
+  all_genrec = merge(all_genrec, included_subj, all.y = T)   # all.y = T -> all rows are removed from x (all_genrec), which are not also present in y (included_subj)
+}
+if (do_exclude_bad_training_blocks) {
+  all_genrec = subset(all_genrec, (is.na(ToL_bad) | !ToL_bad) & (is.na(food_bad) | !food_bad) & (is.na(catii_bad) | !catii_bad) & (is.na(catrb_bad) | !catrb_bad))
+}
+summary(all_genrec)
 
 ```
 ```{r Plot parameters over runs}
-
+for (h in levels(factor(all_genrec$hier))) {
+  gg_w = ggplot(subset(all_genrec, hier == h), aes(run, w, color = model)) +
+    stat_summary(fun.data = mean_cl_normal, geom = "pointrange") +
+    geom_point(alpha = .2, position = "jitter") +
+    facet_grid(training_s1 ~ n_par)
+  plot(gg_w)
+}
 ```
 
 ```{r Read in parameter data, echo = F, results = F, warning = F, message = F}
