@@ -77,12 +77,18 @@ switch runID
         runID = 4;
 end
 
+if strcmp(mode, 'hier')
+    hier = 1;
+else
+    hier = 0;
+end
+
 % Save everything
 genrec_columns;
 genrec = zeros(1, 22);
 genrec(1, rec_aabblwpk_c) = [a1 a2 b1 b2 l w p k];
 genrec(1, NLLBICAIC_c) = [X.NLL X.BIC X.AIC];  % Model fit indicators
-genrec(1, [2 4]) = [103 n_par];  % model n_par  
+genrec(1, [2:4]) = [103 hier n_par];  % model n_par  
 genrec(1, [agentID_c run_c]) = [agentID runID]
 
 %% Save resulting parameters

@@ -23,7 +23,7 @@ fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data);
 [fit_params, ~] = minimize_NLL(fun, fit_par, 100)   % Set fmincon_iterations HERE
 NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data);
 agentID = str2double(file_name(4:6));
-runID = file_name(9);
+runID = num2str(file_name(9));
 
 %%% Save generated (simulated) and recovered (fitted) values in genrec
 genrec_columns;
