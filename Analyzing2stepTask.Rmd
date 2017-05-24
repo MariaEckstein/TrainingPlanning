@@ -13,20 +13,10 @@ output:
     toc: no
 ---
 
-# PART 0: TDs
-* Run only the things that I need for the paper, but double-check that everything is right! (1) switch-stay. (2) Regression. (3) Parameters.
-* If I have time AFTER that, run lagged regression.
-
-* Correlation between w & logistic regression interaction term OR (interaction term - reward term)
-* Or: median split on w and compare logistic regressions (also for simulated data)
-
-# Preprocessing
-
-After completing the experiment, some subjects reported that they had explored the reward probabilities of different *keys* rather than *fractals* in the 2-step task because they mistrusted the accuracy of the task instructions after receiving reward at a rather low rate. In addition, we had noticed during administration of the 2-step task that when getting tired, some subjects tended to repeat the same key for considerable durations, neglecting the task. To clean the data from both of these sources of noise, we decided to exclude all trials from the *switch-stay analysis*, in which the same key had been pressed more than 9 times in a row. (Removing these trials is justified because the probability that 10 consecutive trials required pressing the same key 10 times in a row is negligibly low, i.e., $0.5^{10} = `r round(0.5 ^ 10 * 100, 3)`$ percent). For the *parameter analysis*, an additional parameter $k$ was added to the model, which captured *key perseverance*. ($k$ is described in more detail below.) 
-
 ```{r Set script parameters and load libraries, message = F, results = F, warning = F}
 
 data_source = "2016from_scratch"        # can be 2015 (Munich data) or 2016 (Xlab data)
+maria_only = T                          # maria's models only (including k parameter)
 use_Klaus_model = T                     # use Klaus' model fitting results?
 remove_run4 = F
 do_exclude_trials = T                   # Exclude trials based on perseverance, RTs, etc?
@@ -841,10 +831,23 @@ gg_manipcheck
 ```{r Read in parameter data and compare, echo = F}
 
 if (preprocess_data) {
-  # Read in all parameter estiamtes
-  all_genrec = as.data.frame(readMat(file.path(model_dir, "all_genrec.mat"))$all.genrec)
+  # Read in all parameter estimates
+  if (maria_only) {
+    TS_file_dir = file.path(model_dir, "Results/flat_models")
+    all_genrec = data.frame()
+    file_names = list.files(TS_file_dir)
+    for (file_name in file_names) {
+      genrec = as.data.frame(readMat(file.path(TS_file_dir, file_name))$genrec)
+      model = substr(file_name, 11, nchar(file_name) - 12)
+      all_genrec = rbind(all_genrec, cbind(genrec, model))
+    }
+  } else {
+    all_genrec = as.data.frame(readMat(file.path(model_dir, "all_genrec.mat"))$all.genrec)
+    all_genrec$model_name = all_genrec$V4
+  }
+  
   all_genrec = subset(all_genrec, select = -c(5:9, 18))
-  colnames(all_genrec) = c("SubjID", "model", "hier", "n_par", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "run", "NLL", "BIC", "AIC")
+  colnames(all_genrec) = c("SubjID", "model", "hier", "n_par", "a1", "a2", "b1", "b2", "l", "w", "p", "k", "run", "NLL", "BIC", "AIC", "model_name")
   all_genrec$hier = factor(all_genrec$hier, levels = c(0, 1), labels = c("flat", "hier"))
   all_genrec$model = factor(all_genrec$model, levels = c(112, 103), labels = c("M", "K"))
   all_genrec$run[all_genrec$model == "M"] = all_genrec$run[all_genrec$model == "M"] - 64  # fix (old) bug
@@ -857,14 +860,14 @@ all_genrec = read.csv("all_genrec.csv")
 all_genrec$hier = factor(all_genrec$hier)
 M = subset(all_genrec, model == "M")
 
-a2_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2"))
-a2_dat = reshape(a2_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
+a2_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2", "model_name"))
+a2_dat = reshape(a2_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
 
-p_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "p"))
-p_dat = reshape(p_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
+p_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "p", "model_name"))
+p_dat = reshape(p_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
 
-w_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w"))
-w_dat = reshape(w_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par"))
+w_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w", "model_name"))
+w_dat = reshape(w_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
 
 wide_dat = merge(a2_dat, p_dat)
 wide_dat = merge(wide_dat, w_dat)
@@ -884,8 +887,8 @@ ggplot(wide_dat, aes(w.M, w.K)) +
   labs(x = "w Maria", y = "w Klaus") +
   facet_grid(~ n_par)
 
-hier_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2"))
-hier_dat = reshape(hier_dat, timevar = "hier", direction = "wide", idvar = c("SubjID", "run", "model", "n_par"))
+hier_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2", "model_name"))
+hier_dat = reshape(hier_dat, timevar = "hier", direction = "wide", idvar = c("SubjID", "run", "model", "n_par", "model_name"))
 
 ggplot(hier_dat, aes(a2.hier, a2.flat, color = model)) +
   geom_point() +
@@ -908,20 +911,28 @@ ggplot(hier_dat, aes(w.hier, w.flat, color = model)) +
 
 all_genrec$n_par = factor(all_genrec$n_par)
 
-ggplot(subset(all_genrec), aes(model, BIC, fill = n_par)) +
+ggplot(subset(all_genrec), aes(model, BIC, fill = model_name)) +
   stat_summary(fun.data = mean_cl_normal, geom = "bar", position = "dodge") +
   stat_summary(fun.data = mean_cl_normal, geom = "pointrange", position = position_dodge(width = .9)) +
   geom_point(alpha = .1, position = position_dodge(width = .9)) +
   facet_grid(~ hier)
 
-K = reshape(subset(all_genrec, hier == "flat" & model == "K", select = c("SubjID", "n_par", "run", "BIC", "model")),
-            idvar = c("SubjID", "run", "model"), timevar = "n_par", direction = "wide")
-M = reshape(subset(all_genrec, hier == "flat" & model == "M", select = c("SubjID", "n_par", "run", "BIC", "model")),
-            idvar = c("SubjID", "run", "model"), timevar = "n_par", direction = "wide")
+K = reshape(subset(all_genrec, hier == "flat" & model == "K", select = c("SubjID", "n_par", "run", "BIC", "model", "model_name")),
+            idvar = c("SubjID", "run", "model"), timevar = "model_name", direction = "wide")
+M = reshape(subset(all_genrec, hier == "flat" & model == "M", select = c("SubjID", "n_par", "run", "BIC", "model", "model_name")),
+            idvar = c("SubjID", "run", "model"), timevar = "model_name", direction = "wide")
 rel_BIC = rbind(K, M)
-rel_BIC$r4 = with(rel_BIC, BIC.7 - BIC.4)
-rel_BIC$r6 = with(rel_BIC, BIC.7 - BIC.6)
-rel_BIC_molten = melt(subset(rel_BIC, select = c("SubjID", "run", "model", "r4", "r6")),
+rel_BIC$r4 = with(rel_BIC, BIC.hyb - BIC.4)
+rel_BIC$r6 = with(rel_BIC, BIC.hyb - BIC.6)
+rel_BIC$r7 = with(rel_BIC, BIC.hyb - BIC.7)
+rel_BIC$ra1b1 = with(rel_BIC, BIC.hyb - BIC.a1b1)
+rel_BIC$rmb = with(rel_BIC, BIC.hyb - BIC.mb)
+rel_BIC$rmf = with(rel_BIC, BIC.hyb - BIC.mf)
+rel_BIC$rl0 = with(rel_BIC, BIC.hyb - BIC.l0)
+rel_BIC$rl1 = with(rel_BIC, BIC.hyb - BIC.l1)
+rel_BIC$rnop = with(rel_BIC, BIC.hyb - BIC.nop)
+rel_BIC$rnok = with(rel_BIC, BIC.hyb - BIC.nok)
+rel_BIC_molten = melt(subset(rel_BIC, select = c("SubjID", "run", "model", "r4", "r6", "r7", "ra1b1", "rmb", "rmf", "rl0", "rl1", "rnop", "rnok")),
                       id.vars = c("SubjID", "run", "model"))
 rel_BIC_molten$variable = factor(rel_BIC_molten$variable)
 
@@ -939,7 +950,7 @@ wilcox.test(subset(rel_BIC_molten, variable == "r4")$value)
 wilcox.test(subset(rel_BIC_molten, variable == "r6")$value)
 t.test(subset(rel_BIC_molten, variable == "r4")$value, subset(rel_BIC_molten, variable == "r6")$value)
 
-best_model = subset(all_genrec, model == "M" & n_par == 4 & run != "Run 4" & hier == "flat")
+best_model = subset(all_genrec, model_name == "a1b1" & run != "Run 4")  # model == "M" & n_par == 4 & run != "Run 4" & hier == "flat"
 best_model = add_group_columns(best_model)
 ```
 ```{r exclude bad participants}
@@ -1037,14 +1048,16 @@ ggplot(all_params, aes(w.K, w.C, color = n_par)) +
 ```
 ```{r Compare RL model parameters and switch-stay interaction terms, echo = F}
 
+# all_params = all_genrec
+
 logist_regr_data_with_rep = read.csv(file.path(regression_dir, paste("logist_regr_data_with_rep_", data_source, ".csv", sep = "")))
 params_regr_dat = merge(subset(logist_regr_data_with_rep, effect == "int", select = -AIC), all_params)
 
-ggplot(subset(params_regr_dat, odds < 5 & odds > -5), aes(w, odds, color = run)) +
+ggplot(subset(params_regr_dat, odds < 5 & odds > -5 & !model_name %in% c("mb", "mf")), aes(w, odds, color = run)) +
   geom_point() +
   geom_smooth(method = "lm") +
   labs(x = "Maria w", color = "") +
-  facet_grid(n_par ~ hier)
+  facet_grid(hier ~ model_name)
 
 ggplot(subset(params_regr_dat, odds < 5 & odds > -5), aes(w.K, odds, color = run)) +
   geom_point() +
@@ -1063,10 +1076,10 @@ ggplot(subset(params_regr_dat, odds < 5 & odds > -5), aes(w.C, odds, color = run
 ## Plot all models
 all_genrec = add_group_columns(all_genrec)
 for (h in levels(factor(all_genrec$hier))) {
-  gg_w = ggplot(subset(all_genrec, hier == h), aes(run, w, color = model)) +
+  gg_w = ggplot(subset(all_genrec, hier == h & !model_name %in% c("mb", "mf")), aes(run, w, color = model)) +
     stat_summary(fun.data = mean_cl_normal, fun.args = list(mult = 1), geom = "pointrange") +
     labs(x = "") +
-    facet_grid(training_s1 ~ n_par)
+    facet_grid(training_s1 ~ model_name)
   plot(gg_w)
   plot(gg_w + geom_point(alpha = .2, position = "jitter"))
 }

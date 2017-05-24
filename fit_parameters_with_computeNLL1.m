@@ -1,4 +1,4 @@
-function fit_parameters_with_computeNLL1(full_file_path, n_fit)
+function fit_parameters_with_computeNLL1(full_file_path, n_fit, hier)
 
 %% Load participant file
 [file_dir, file_name] = fileparts(full_file_path);
@@ -14,14 +14,18 @@ switch n_fit
         fit_model = 'nok_l0';
     case 7
         fit_model = 'nok';
+    otherwise
+        fit_model = n_fit;
 end
 model_parameters = define_model_parameters;  % Which parameters are fitted (-1) versus fixed (values) in each model?
 fit_par = model_parameters(model_ID(fit_model),:);  % Which parameters will be fitted (-1) and which are fixed by me (values)?
-
+if ~isnumeric(n_fit)
+    n_fit = sum(fit_par == -1);
+end
 %% Minimize the log likelihood
-fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data); 
+fun = @(par)computeNLL(Agent, par, n_fit, 'NLL', common, sim_data, hier); 
 [fit_params, ~] = minimize_NLL(fun, fit_par, 100)   % Set fmincon_iterations HERE
-NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data);
+NLLBICAIC = computeNLL(Agent, fit_params, n_fit, 'all', common, sim_data, hier);
 agentID = str2double(file_name(4:6));
 runID = num2str(file_name(9));
 
@@ -34,5 +38,5 @@ genrec(1, [2 4]) = [112 n_fit];  % model n_fit
 genrec(1, [agentID_c run_c]) = [agentID runID]
 
 %% Save resulting parameters
-genrec_filename = ['Results/' file_name '_' num2str(n_fit) 'M_genrec.mat']
+genrec_filename = ['Results/' file_name '_' fit_model hier 'M_genrec.mat']
 save(genrec_filename, 'genrec')

@@ -137,8 +137,8 @@ X.NLL = lik;
 
 % calculate group data if nargin > 2
 epsilon = 0.0000001;
-par(par < epsilon) = epsilon;
-par(par > 1 - epsilon) = 1 - epsilon;
+par(par == 0) = epsilon;
+par(par == 1) = 1 - epsilon;
 par_n = -log(1./par - 1);
 if length(par) == 4
     par_n(2) = log(par(2)); % b: inverse function to convert pars into -inf..inf space

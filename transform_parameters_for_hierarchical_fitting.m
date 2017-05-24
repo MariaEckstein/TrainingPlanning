@@ -47,10 +47,6 @@ for i_par = 1:7
     sd_7pars(i_par) = nanstd(par_n7(:,i_par));
 end
 
-% par_n4(par_n4 > quantile(par_n4, 0.9) | par_n4 < quantile(par_n4, 0.1)) = nan;
-% par_n6(par_n6 > quantile(par_n6, 0.9) | par_n6 < quantile(par_n6, 0.1)) = nan;
-% par_n7(par_n7 > quantile(par_n7, 0.9) | par_n7 < quantile(par_n7, 0.1)) = nan;
-
 for i_par = 1:4
     mean_4pars(i_par) = nanmean(par_n4(:,i_par));
 end
@@ -60,6 +56,11 @@ end
 for i_par = 1:7
     mean_7pars(i_par) = nanmean(par_n7(:,i_par));
 end
+
+M = mean_4pars
+S = cov(par_n4)
+
+mvnpdf(M,M,S)
 
 figure
 subplot(2, 3, 1)

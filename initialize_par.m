@@ -1,5 +1,5 @@
 
-epsilon = 0.000001;
+epsilon = 1e-10;  % fmincon only works when it is EXACLTY 1e-10 (or bigger)
 
 % Initial values
 Q1 = [.5 .5];   % Initial values 2st-stage fractals. [frac1 frac2] (according to fractal NAMES, not positions!!!)

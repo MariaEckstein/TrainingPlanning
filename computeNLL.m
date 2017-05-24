@@ -1,4 +1,4 @@
-function result = computeNLL(Agent, par, n_fit, output, common, data_type)
+function result = computeNLL(Agent, par, n_fit, output, common, data_type, hier)
 
 % Agent = params.user.log;
 % par = [.1 .1 .01 .01 1 .5 .5 .5];
@@ -9,7 +9,7 @@ function result = computeNLL(Agent, par, n_fit, output, common, data_type)
 n_params = length(par);
 initialize_par;
 
-%%% Data: Participant behavior (= sequence of choices)
+%% Data: Participant behavior (= sequence of choices)
 if strcmp(data_type, 'real')
     real_data_columns;
     Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
@@ -18,15 +18,15 @@ else
     data_columns;   % Find out which columns contain what
 end
 [n_trials, ~] = size(Agent);   % number of trials
-% LL = 0;   % initialize log likelihood
 
+%% Keep track of results trial-by-trial
 P = 0.5 * ones(n_trials,6);
 V = zeros(n_trials,6);
 M = zeros(n_trials,2);
 Q = zeros(n_trials,2);
 LL = zeros(n_trials,2);
 
-%%% LL for each trial, given sequence of previous trials
+%% LL for each trial, given sequence of previous trials
 for t = 1:n_trials
 
     % Stage 1: Calculate likelihood of chosen actions
@@ -41,7 +41,7 @@ for t = 1:n_trials
     frac2 = Agent(t, frac2_c);
     key2 = Agent(t, key2_c);
 
-    % Check outcome of trial and update values for next trial
+    % Perceive trial outcome and update values for next trial
     reward = Agent(t, reward_c);
 
     % Model-free
@@ -71,11 +71,33 @@ for t = 1:n_trials
 
 end
 
-% Take negative of LL to get negative log likelihood; calculate BIC and AIC
+%% Take negative of LL to get negative log likelihood; calculate BIC and AIC
 NLL = -sum(sum(LL));
 BIC = 2 * NLL + n_fit * log(2 * n_trials);
 AIC = 2 * NLL + 2 * n_fit;
 
+%% Compute hierarchical fits
+if strcmp(hier, 'hier')
+    % Get population priors of 'flat' parameters
+    load('flat_par.mat')
+    flat_par(flat_par < epsilon) = epsilon;  % adjust values of 0 and 1
+    flat_par(flat_par > 1 - epsilon) = 1 - epsilon;
+    flat_par_n = -log(1./flat_par - 1);  % Transform to -inf to inf space
+    M = mean(flat_par_n);  % mean of each parameter
+    S = cov(flat_par_n);  % covariance: diagonal = variance; off-diagonal = covariance
+    % Calculate 'hierarchical' parameters using population priors
+    par(par < epsilon) = epsilon;
+    par(par > 1 - epsilon) = 1 - epsilon;
+    par_n = -log(1./par - 1);  % Same transform because all parameters lie between 0 and 1
+    pd_par = mvnpdf(par_n, M, S);  % probability density at this spot, given population
+    if pd_par < epsilon
+        pd_par = epsilon;
+    end
+    NLprior = -sum(log(pd_par));  % negative log prior: the larger, the smaller the prior probability
+    NLL = NLL + NLprior;  % NLPosterior = NLLikelihood + NLprior
+end
+
+%% Return results
 if strcmp(output, 'NLL')
     result = NLL;
 else
