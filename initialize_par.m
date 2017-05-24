@@ -1,4 +1,4 @@
-
+% Epsilon for correction of 0's and 1's
 epsilon = 1e-10;  % fmincon only works when it is EXACLTY 1e-10 (or bigger)
 
 % Initial values
@@ -19,9 +19,16 @@ if beta1 == 0
     beta1 = beta2;
 end
 lambda = par(5);
-w = par(6);
 p_par = par(7) * 10 - 5;
 k_par = par(8) * 10 - 5;
+switch run
+    case 1
+        w = par(6);
+    case 2
+        w = par(9);
+    case 3
+        w = par(10);
+end
 
 % Initialize non-existent last keys and last fractals, so that no fractal gets a bonus in the first trial
 key1 = 123;

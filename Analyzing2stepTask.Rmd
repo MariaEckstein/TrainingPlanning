@@ -833,7 +833,7 @@ gg_manipcheck
 if (preprocess_data) {
   # Read in all parameter estimates
   if (maria_only) {
-    TS_file_dir = file.path(model_dir, "Results/flat_models")
+    TS_file_dir = file.path(model_dir, "Results/hyb_hier_vs_flat")
     all_genrec = data.frame()
     file_names = list.files(TS_file_dir)
     for (file_name in file_names) {
@@ -858,33 +858,35 @@ if (preprocess_data) {
 }
 all_genrec = read.csv("all_genrec.csv")
 all_genrec$hier = factor(all_genrec$hier)
+
+
 M = subset(all_genrec, model == "M")
 
-a2_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2", "model_name"))
-a2_dat = reshape(a2_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
+a1_dat = reshape(subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a1", "model_name")),
+                 timevar = "model_name", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model"))
 
-p_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "p", "model_name"))
-p_dat = reshape(p_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
+a2_dat = reshape(subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2", "model_name")),
+                 timevar = "model_name", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model"))
 
-w_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w", "model_name"))
-w_dat = reshape(w_dat, timevar = "model", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model_name"))
+p_dat = reshape(subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "p", "model_name")),
+                timevar = "model_name", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model"))
 
-wide_dat = merge(a2_dat, p_dat)
+w_dat = reshape(subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "w", "model_name")),
+                timevar = "model_name", direction = "wide", idvar = c("SubjID", "run", "hier", "n_par", "model"))
+
+wide_dat = merge(a1_dat, p_dat)
 wide_dat = merge(wide_dat, w_dat)
 
-ggplot(wide_dat, aes(a2.M, a2.K, color = hier)) +
+ggplot(wide_dat, aes(a1.hybhier, a1.hyb, color = hier)) +
   geom_point(alpha = .2) +
-  labs(x = "alpha Maria", y = "alpha Klaus", color = "") +
   facet_grid(~ n_par)
 
-ggplot(wide_dat, aes(p.M, p.K)) +
+ggplot(wide_dat, aes(p.hybhier, p.hyb)) +
   geom_point() +
-  labs(x = "p Maria", y = "p Klaus") +
   facet_grid(~ n_par)
 
-ggplot(wide_dat, aes(w.M, w.K)) +
+ggplot(wide_dat, aes(w.hybhier, w.hyb)) +
   geom_point() +
-  labs(x = "w Maria", y = "w Klaus") +
   facet_grid(~ n_par)
 
 hier_dat = subset(all_genrec, select = c("SubjID", "run", "model", "hier", "n_par", "a2", "model_name"))

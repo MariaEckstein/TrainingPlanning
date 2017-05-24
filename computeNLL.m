@@ -1,21 +1,23 @@
-function result = computeNLL(Agent, par, n_fit, output, common, data_type, hier)
+function result = computeNLL(Agent, run, par, n_fit, output, data_type, hier)
 
 % Agent = params.user.log;
 % par = [.1 .1 .01 .01 1 .5 .5 .5];
 % data_type = 'real';
+common = 0.7;
+preprocess_Agent;
 
 %% Compute -LL of behavior, given parameters
 %%% Parameters at beginning of experiment
 n_params = length(par);
-initialize_par;
+initialize_par;  % w depends on run
 
 %% Data: Participant behavior (= sequence of choices)
 if strcmp(data_type, 'real')
-    real_data_columns;
+    real_data_columns;   % Which columns contain what
     Agent(:,frac2_p) = Agent(:,frac2_p) - 2;
     Agent(:,frac2_c) = Agent(:,frac2_c) - 2;
 else
-    data_columns;   % Find out which columns contain what
+    data_columns;
 end
 [n_trials, ~] = size(Agent);   % number of trials
 
